@@ -128,7 +128,7 @@ dev = [
 geointerpo = "geointerpo.cli:main"
 
 [project.urls]
-Repository = "https://github.com/homayounrezaie/geonterpo"
+Repository = "https://github.com/homayounrezaie/geointerpo"
 
 [tool.hatch.build.targets.wheel]
 packages = ["geointerpo"]
