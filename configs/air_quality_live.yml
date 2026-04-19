@@ -1,0 +1,28 @@
+title: "South Asia PM2.5 — live OpenAQ data"
+
+bbox: [68.0, 20.0, 90.0, 35.0]
+resolution: 0.5
+cv_folds: 5
+
+source:
+  type: openaq
+  parameter: pm25
+  date_from: "2024-01-15"
+  date_to: "2024-01-15"
+
+interpolators:
+  - method: idw
+    label: IDW
+
+  - method: kriging
+    label: OK-Exponential
+    variogram_model: exponential
+
+  - method: rf
+    label: Random Forest
+
+output:
+  dir: outputs
+  plot: true
+  plot_file: air_quality_comparison.png
+  geotiff: true

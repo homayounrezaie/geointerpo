@@ -1,0 +1,32 @@
+title: "Central Europe temperature — offline demo"
+
+bbox: [5.0, 44.0, 25.0, 56.0]   # min_lon, min_lat, max_lon, max_lat
+resolution: 0.25
+cv_folds: 5
+
+source:
+  type: sample
+  variable: temperature
+
+interpolators:
+  - method: idw
+    label: IDW
+    power: 2
+
+  - method: rbf
+    label: RBF
+    kernel: thin_plate_spline
+
+  - method: kriging
+    label: Ordinary Kriging
+    variogram_model: spherical
+
+  - method: rk
+    label: Regression Kriging
+
+output:
+  dir: outputs
+  plot: true
+  plot_file: temperature_comparison.png
+  geotiff: false
+  netcdf: false

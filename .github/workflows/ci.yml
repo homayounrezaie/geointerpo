@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # Fast offline tests — no network, no optional heavy deps
+  offline:
+    name: Offline tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install core + kriging deps
+        run: pip install -e ".[kriging]" pytest pytest-cov
+
+      - name: Run offline tests only
+        run: pytest tests/ -v -m "not network and not gee" --cov=geointerpo --cov-report=term-missing
+
+  # Network tests — optional, only on push to main
+  network:
+    name: Network tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: offline
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install full deps (no GEE)
+        run: pip install -e ".[full]" pytest
+
+      - name: Run network tests
+        run: pytest tests/ -v -m "network and not gee"
+        continue-on-error: true   # don't fail CI on rate-limit flakiness

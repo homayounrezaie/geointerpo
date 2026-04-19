@@ -1,0 +1,49 @@
+title: "Calgary, AB — temperature interpolation with boundary clipping"
+
+# Study-area boundary — resolved from place name via Nominatim (free, no key)
+# Alternatively use:
+#   boundary:
+#     source: file
+#     path: data/calgary_boundary.geojson
+boundary:
+  source: place
+  name: "Calgary, Alberta, Canada"
+  provider: nominatim
+  padding_deg: 0.1   # small margin outside the admin boundary
+
+# Extra padding added around the boundary to define the interpolation grid
+padding_deg: 0.3
+
+# Clip output grids to the boundary polygon
+clip_to_boundary: true
+
+resolution: 0.05   # ~5 km grid — tighter for a city-scale study area
+
+cv_folds: 5
+
+# Data source
+source:
+  type: sample
+  variable: temperature
+
+interpolators:
+  - method: idw
+    label: IDW
+    power: 2
+
+  - method: kriging
+    label: Ordinary Kriging
+    variogram_model: spherical
+
+  - method: spline
+    label: Spline (Regularized)
+
+  - method: rbf
+    label: RBF (thin-plate)
+    kernel: thin_plate_spline
+
+output:
+  dir: outputs/calgary
+  plot: true
+  plot_file: calgary_temperature.png
+  geotiff: true

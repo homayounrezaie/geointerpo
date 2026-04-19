@@ -1,0 +1,146 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "geointerpo"
+version = "0.1.0"
+description = "Spatial interpolation toolkit — boundaries, point data, 15 methods, export, validation"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+authors = [{ name = "Ali Rezaie", email = "homayounrezaie@gmail.com" }]
+keywords = ["geostatistics", "interpolation", "kriging", "spatial", "idw", "weather", "air-quality"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+# Core — interpolation + boundaries + IO + validation.
+# All optional heavy libs (kriging, ML, raster, data APIs) are extras.
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.11",
+    "geopandas>=0.14",
+    "shapely>=2.0",
+    "pyproj>=3.6",
+    "xarray>=2023.1",
+    "pandas>=2.0",
+    "pyyaml>=6.0",
+    "requests>=2.31",    # used by boundaries (Nominatim) and GEE validator
+]
+
+[project.optional-dependencies]
+# Kriging and ML interpolation
+kriging = [
+    "pykrige>=1.7",
+    "scikit-learn>=1.3",
+]
+# Raster I/O (GeoTIFF export and boundary clipping)
+raster = [
+    "rasterio>=1.3",
+    "rioxarray>=0.15",
+]
+# Live data source adapters (weather + air quality APIs)
+data = [
+    "meteostat>=1.6",
+    "requests-cache>=1.1",
+    "retry-requests>=2.0",
+    "openmeteo-requests>=1.2",
+    "openaq>=0.7",
+    "tqdm>=4.65",
+]
+# Google Earth Engine validation (requires earthengine authenticate)
+gee = [
+    "earthengine-api>=0.1.390",
+    "rasterio>=1.3",
+    "rioxarray>=0.15",
+]
+# Static visualization helpers (matplotlib only)
+viz = [
+    "matplotlib>=3.7",
+]
+# Location geocoding (named-location backward-compat, Nominatim uses requests)
+geo = [
+    "geopy>=2.4",
+]
+# SRTM elevation covariate
+dem = [
+    "srtm.py>=0.3.5",
+]
+# Recommended install — everything a data scientist needs except GEE
+full = [
+    "pykrige>=1.7",
+    "scikit-learn>=1.3",
+    "rasterio>=1.3",
+    "rioxarray>=0.15",
+    "meteostat>=1.6",
+    "requests-cache>=1.1",
+    "retry-requests>=2.0",
+    "openmeteo-requests>=1.2",
+    "openaq>=0.7",
+    "tqdm>=4.65",
+    "matplotlib>=3.7",
+    "geopy>=2.4",
+    "srtm.py>=0.3.5",
+]
+# Interactive notebooks — heavy optional tools kept out of the core library
+notebooks = [
+    "matplotlib>=3.7",
+    "leafmap>=0.30",
+    "geemap>=0.30",
+    "jupyter",
+    "ipykernel",
+    "nbformat",
+]
+# Dev tooling — full + GEE + notebooks + testing
+dev = [
+    "pykrige>=1.7",
+    "scikit-learn>=1.3",
+    "rasterio>=1.3",
+    "rioxarray>=0.15",
+    "meteostat>=1.6",
+    "requests-cache>=1.1",
+    "retry-requests>=2.0",
+    "openmeteo-requests>=1.2",
+    "openaq>=0.7",
+    "tqdm>=4.65",
+    "matplotlib>=3.7",
+    "geopy>=2.4",
+    "srtm.py>=0.3.5",
+    "earthengine-api>=0.1.390",
+    "leafmap>=0.30",
+    "geemap>=0.30",
+    "jupyter",
+    "ipykernel",
+    "pytest>=7",
+    "pytest-cov",
+    "ruff",
+]
+
+[project.scripts]
+geointerpo = "geointerpo.cli:main"
+
+[project.urls]
+Repository = "https://github.com/homayounrezaie/geonterpo"
+
+[tool.hatch.build.targets.wheel]
+packages = ["geointerpo"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"
+markers = [
+    "network: marks tests that require network access (deselect with -m 'not network')",
+    "gee: marks tests that require Google Earth Engine auth (deselect with -m 'not gee')",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
