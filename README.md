@@ -65,42 +65,64 @@ result.save("outputs/")  # GeoTIFF + PNG + CSV
 
 geointerpo covers the full ArcGIS Spatial Analyst interpolation toolkit plus modern ML methods. All share the same interface — swap `method=` to compare.
 
-### Classical
+### Distance-based
 
-Fast and assumption-free. Good as a baseline or when data is dense.
+The fastest methods — no statistical assumptions, exact at data points. Ideal as a quick baseline or when data is dense and evenly distributed.
 
 <p align="center">
-  <img src="outputs/methods/idw.png" width="230"/>
+  <img src="outputs/methods/idw.png" width="220"/>
   &nbsp;
-  <img src="outputs/methods/rbf.png" width="230"/>
+  <img src="outputs/methods/nearest.png" width="220"/>
   &nbsp;
-  <img src="outputs/methods/spline.png" width="230"/>
+  <img src="outputs/methods/linear.png" width="220"/>
+  &nbsp;
+  <img src="outputs/methods/cubic.png" width="220"/>
 </p>
 
-`idw` · `rbf` · `spline` · `spline_tension` · `trend` · `nearest` · `linear` · `cubic`
+`idw` · `nearest` · `linear` · `cubic`
+
+### Spline & Trend
+
+Fit smooth continuous surfaces. Splines minimise curvature; RBF offers eight kernel choices; Trend fits a global polynomial for large-scale patterns.
+
+<p align="center">
+  <img src="outputs/methods/spline.png" width="220"/>
+  &nbsp;
+  <img src="outputs/methods/spline_tension.png" width="220"/>
+  &nbsp;
+  <img src="outputs/methods/rbf.png" width="220"/>
+  &nbsp;
+  <img src="outputs/methods/trend.png" width="220"/>
+</p>
+
+`spline` · `spline_tension` · `rbf` · `trend`
 
 ### Geostatistical
 
-Account for spatial autocorrelation. Produce statistically optimal estimates with cross-validation metrics.
+Account for spatial autocorrelation via a variogram model. Produce statistically optimal, unbiased estimates. Natural Neighbor uses Voronoi area-stealing weights — smooth and exact at data locations.
 
 <p align="center">
-  <img src="outputs/methods/kriging.png" width="340"/>
-  &nbsp;&nbsp;
-  <img src="outputs/methods/natural_neighbor.png" width="340"/>
+  <img src="outputs/methods/kriging.png" width="290"/>
+  &nbsp;
+  <img src="outputs/methods/uk.png" width="290"/>
+  &nbsp;
+  <img src="outputs/methods/natural_neighbor.png" width="290"/>
 </p>
 
-`kriging` · `uk` (Universal Kriging) · `natural_neighbor`
+`kriging` (Ordinary) · `uk` (Universal) · `natural_neighbor`
 
 ### Machine Learning
 
-Capture non-linear spatial patterns. GP also returns a per-pixel uncertainty surface.
+Capture non-linear spatial patterns. GP returns a full uncertainty surface alongside the mean prediction. Regression Kriging combines an ML trend with Kriging of the residuals.
 
 <p align="center">
-  <img src="outputs/methods/gp.png" width="230"/>
+  <img src="outputs/methods/gp.png" width="220"/>
   &nbsp;
-  <img src="outputs/methods/rf.png" width="230"/>
+  <img src="outputs/methods/rf.png" width="220"/>
   &nbsp;
-  <img src="outputs/methods/rk.png" width="230"/>
+  <img src="outputs/methods/gbm.png" width="220"/>
+  &nbsp;
+  <img src="outputs/methods/rk.png" width="220"/>
 </p>
 
 `gp` (Gaussian Process) · `rf` (Random Forest) · `gbm` (Gradient Boosting) · `rk` (Regression Kriging)
