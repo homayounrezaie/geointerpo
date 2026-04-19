@@ -66,3 +66,16 @@ result.save("outputs/")
 ## Stack
 
 `scipy` · `geopandas` · `shapely` · `pyproj` · `xarray` · `pykrige` · `scikit-learn` · `rasterio` · `matplotlib`
+
+---
+
+## References
+
+- [ArcGIS Pro — Interpolation Tools Overview](https://pro.arcgis.com/en/pro-app/latest/tool-reference/spatial-analyst/an-overview-of-the-interpolation-tools.htm)
+- [3 Best Methods for Spatial Interpolation — Towards Data Science](https://towardsdatascience.com/3-best-methods-for-spatial-interpolation-912cab7aee47/)
+- [GeoStat-Framework/PyKrige](https://github.com/GeoStat-Framework/PyKrige) — Ordinary, Universal, and Regression Kriging
+- [GeoStat-Framework/GSTools](https://github.com/GeoStat-Framework/GSTools) — Covariance models, variograms, random fields
+- [mmaelicke/scikit-gstat](https://github.com/mmaelicke/scikit-gstat) — Variogram estimation and ordinary kriging
+- [DataverseLabs/pyinterpolate](https://github.com/DataverseLabs/pyinterpolate) — IDW, kriging, Poisson kriging
+- [fatiando/verde](https://github.com/fatiando/verde) — Machine-learning-style spatial gridding
+- [GeostatsGuy/GeostatsPy](https://github.com/GeostatsGuy/GeostatsPy) — GSLIB-based geostatistics
