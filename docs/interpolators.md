@@ -1,167 +1,116 @@
-# Interpolation Methods
+# Methods
 
 **15 algorithms · 24 method keys.**  
-Every method shares the same interface: `.fit(gdf)` → `.predict(bbox, resolution)` → `xr.DataArray`.
+Every method shares `.fit(gdf)` → `.predict(bbox, resolution)` → `xr.DataArray`.  
+Swap `method=` to compare — everything else stays the same.
 
 ---
 
-## Output gallery
+## Distance-based
 
-All 15 methods on the same dataset — 60 weather stations, Alberta, Canada, 0.25° grid:
+Fast and assumption-free. Good as a baseline or when data is dense and evenly distributed.
 
-<table>
-<tr>
-  <td align="center"><img src="assets/methods/idw.png" width="220"/><br/><b>IDW</b></td>
-  <td align="center"><img src="assets/methods/kriging.png" width="220"/><br/><b>Ordinary Kriging</b></td>
-  <td align="center"><img src="assets/methods/uk.png" width="220"/><br/><b>Universal Kriging</b></td>
-</tr>
-<tr>
-  <td align="center"><img src="assets/methods/natural_neighbor.png" width="220"/><br/><b>Natural Neighbor</b></td>
-  <td align="center"><img src="assets/methods/spline.png" width="220"/><br/><b>Spline (Regularized)</b></td>
-  <td align="center"><img src="assets/methods/spline_tension.png" width="220"/><br/><b>Spline Tension</b></td>
-</tr>
-<tr>
-  <td align="center"><img src="assets/methods/trend.png" width="220"/><br/><b>Trend Surface</b></td>
-  <td align="center"><img src="assets/methods/rbf.png" width="220"/><br/><b>RBF</b></td>
-  <td align="center"><img src="assets/methods/nearest.png" width="220"/><br/><b>Nearest Neighbor</b></td>
-</tr>
-<tr>
-  <td align="center"><img src="assets/methods/linear.png" width="220"/><br/><b>Linear (Delaunay)</b></td>
-  <td align="center"><img src="assets/methods/cubic.png" width="220"/><br/><b>Cubic (Clough-Tocher)</b></td>
-  <td align="center"><img src="assets/methods/gp.png" width="220"/><br/><b>Gaussian Process</b></td>
-</tr>
-<tr>
-  <td align="center"><img src="assets/methods/rf.png" width="220"/><br/><b>Random Forest</b></td>
-  <td align="center"><img src="assets/methods/gbm.png" width="220"/><br/><b>Gradient Boosting</b></td>
-  <td align="center"><img src="assets/methods/rk.png" width="220"/><br/><b>Regression Kriging</b></td>
-</tr>
-</table>
+<div class="method-row" markdown>
+  <figure><img src="assets/methods/idw.png" width="220"/><figcaption>IDW</figcaption></figure>
+  <figure><img src="assets/methods/nearest.png" width="220"/><figcaption>Nearest Neighbor</figcaption></figure>
+  <figure><img src="assets/methods/linear.png" width="220"/><figcaption>Linear (Delaunay)</figcaption></figure>
+  <figure><img src="assets/methods/cubic.png" width="220"/><figcaption>Cubic (Clough-Tocher)</figcaption></figure>
+</div>
+
+| Key | Description | Key params |
+|---|---|---|
+| `idw` | Inverse Distance Weighting | `power` (default 2) |
+| `nearest` | Nearest-neighbour via scipy griddata | — |
+| `linear` | Delaunay triangulation, linear barycentric | — |
+| `cubic` | Clough-Tocher C¹ cubic | — |
+
+!!! tip
+    Higher `power` in IDW makes the surface more local — distant stations contribute less.
 
 ---
 
-## ArcGIS Spatial Analyst equivalents
+## Spline & Trend
 
-| # | `method=` key | Aliases | Description | Key params |
-|---|---|---|---|---|
-| 1 | `"idw"` | — | Inverse Distance Weighting | `power` |
-| 2 | `"kriging"` | `"ok"`, `"ordinary_kriging"` | Ordinary Kriging | `variogram_model`, `nlags` |
-| 3 | `"uk"` | `"universal_kriging"` | Universal Kriging — detrended residuals | `variogram_model` |
-| 4 | `"natural_neighbor"` | `"nn"` | Voronoi/Sibson area-stealing weights | — |
-| 5 | `"spline"` | `"spline_regularized"` | Minimum curvature spline | `smoothing` |
-| 6 | `"spline_tension"` | — | Tension spline — pulls toward flat | `smoothing` |
-| 7 | `"trend"` | — | Global polynomial trend surface | `order` (1–12) |
-| 8 | `"nearest"` | — | Nearest-neighbour (scipy griddata) | — |
+Fit smooth continuous surfaces. Splines minimise curvature; RBF offers 8 kernel choices; Trend fits a global polynomial for large-scale patterns.
 
-## Additional methods
+<div class="method-row" markdown>
+  <figure><img src="assets/methods/spline.png" width="220"/><figcaption>Spline (Regularized)</figcaption></figure>
+  <figure><img src="assets/methods/spline_tension.png" width="220"/><figcaption>Spline Tension</figcaption></figure>
+  <figure><img src="assets/methods/rbf.png" width="220"/><figcaption>RBF</figcaption></figure>
+  <figure><img src="assets/methods/trend.png" width="220"/><figcaption>Trend Surface</figcaption></figure>
+</div>
 
-| # | `method=` key | Aliases | Description | Key params |
-|---|---|---|---|---|
-| 9 | `"rbf"` | — | Radial Basis Functions — 8 kernels | `kernel`, `smoothing` |
-| 10 | `"linear"` | — | Delaunay triangulation, linear barycentric | — |
-| 11 | `"cubic"` | — | Clough-Tocher C1 cubic | — |
-| 12 | `"gp"` | `"gaussian_process"` | Gaussian Process — outputs mean + σ | `length_scale`, `alpha` |
-| 13 | `"rf"` | `"random_forest"` | Random Forest regressor | `n_estimators`, `max_depth` |
-| 14 | `"gbm"` | `"gradient_boosting"` | Gradient Boosting regressor | `n_estimators`, `learning_rate` |
-| 15 | `"rk"` | `"regression_kriging"` | ML trend + Kriging of residuals | `ml_method` |
+| Key | Description | Key params |
+|---|---|---|
+| `spline` | Minimum curvature regularized spline | `smoothing` |
+| `spline_tension` | Tension spline — flatter between points | `smoothing` |
+| `rbf` | Radial Basis Functions | `kernel`, `smoothing` |
+| `trend` | Global polynomial trend surface | `order` (1–12) |
+
+**RBF kernels:** `thin_plate_spline` · `multiquadric` · `inverse_multiquadric` · `inverse_quadratic` · `gaussian` · `linear` · `cubic` · `quintic`
 
 ---
 
-## Method notes
+## Geostatistical
 
-### IDW
+Account for spatial autocorrelation via a variogram model. Produce statistically optimal, unbiased estimates. Natural Neighbor uses Voronoi area-stealing weights — smooth and exact at data locations.
 
-Simple, fast, and exact at data points. Higher `power` (default 2) makes the surface more local — distant stations contribute less.
+<div class="method-row" markdown>
+  <figure><img src="assets/methods/kriging.png" width="290"/><figcaption>Ordinary Kriging</figcaption></figure>
+  <figure><img src="assets/methods/uk.png" width="290"/><figcaption>Universal Kriging</figcaption></figure>
+  <figure><img src="assets/methods/natural_neighbor.png" width="290"/><figcaption>Natural Neighbor</figcaption></figure>
+</div>
 
-```python
-method_params={"idw": {"power": 3}}
-```
+| Key | Aliases | Description | Key params |
+|---|---|---|---|
+| `kriging` | `ok`, `ordinary_kriging` | Ordinary Kriging | `variogram_model`, `nlags` |
+| `uk` | `universal_kriging` | Universal Kriging — detrended residuals | `variogram_model` |
+| `natural_neighbor` | `nn` | Voronoi/Sibson area-stealing weights | — |
 
-### Kriging (Ordinary and Universal)
+**Variogram models:** `linear` · `power` · `gaussian` · `spherical` · `exponential` · `hole-effect`
 
-Geostatistical — accounts for spatial autocorrelation via a variogram model. Returns optimal unbiased linear estimates. Universal Kriging (`"uk"`) first removes a polynomial trend and kriges the residuals.
+!!! note "Requires kriging extra"
+    ```bash
+    pip install "geointerpo[kriging]"
+    ```
 
-```python
-method_params={"kriging": {"variogram_model": "spherical", "nlags": 8}}
-```
+---
 
-Available variogram models: `"linear"` · `"power"` · `"gaussian"` · `"spherical"` · `"exponential"` · `"hole-effect"`
+## Machine Learning
 
-### Natural Neighbor
+Capture non-linear spatial patterns without variogram assumptions. GP also returns a per-pixel uncertainty surface alongside the mean prediction. Regression Kriging combines an ML trend with Kriging of the residuals.
 
-Uses Voronoi tessellation. The weight for station *i* equals the area that Voronoi cell *i* loses when the query point is inserted. Smooth, local, and exact at data locations. Falls back to IDW for points outside the station convex hull.
+<div class="method-row" markdown>
+  <figure><img src="assets/methods/gp.png" width="220"/><figcaption>Gaussian Process</figcaption></figure>
+  <figure><img src="assets/methods/rf.png" width="220"/><figcaption>Random Forest</figcaption></figure>
+  <figure><img src="assets/methods/gbm.png" width="220"/><figcaption>Gradient Boosting</figcaption></figure>
+  <figure><img src="assets/methods/rk.png" width="220"/><figcaption>Regression Kriging</figcaption></figure>
+</div>
 
-### Spline
-
-Fits a minimum-curvature surface (regularized) or a tension spline. Exact at data points when `smoothing=0`. Good for smooth fields like temperature or elevation.
-
-```python
-method_params={"spline": {"smoothing": 0.1}}
-method_params={"spline_tension": {"smoothing": 0.5}}
-```
-
-### Trend
-
-Fits a global polynomial of degree `order` (default 1 = linear). Captures large-scale spatial patterns but not local variation.
-
-```python
-method_params={"trend": {"order": 2}}
-```
-
-### RBF
-
-Radial Basis Functions with 8 kernel choices. Exact at data points when `smoothing=0`.
+| Key | Aliases | Description | Key params |
+|---|---|---|---|
+| `gp` | `gaussian_process` | Gaussian Process — mean + σ output | `length_scale`, `alpha` |
+| `rf` | `random_forest` | Random Forest regressor | `n_estimators`, `max_depth` |
+| `gbm` | `gradient_boosting` | Gradient Boosting regressor | `n_estimators`, `learning_rate` |
+| `rk` | `regression_kriging` | ML trend + Kriging of residuals | `ml_method` |
 
 ```python
-method_params={"rbf": {"kernel": "thin_plate_spline"}}
-```
-
-Available kernels: `"thin_plate_spline"` · `"multiquadric"` · `"inverse_multiquadric"` · `"inverse_quadratic"` · `"gaussian"` · `"linear"` · `"cubic"` · `"quintic"`
-
-### Gaussian Process
-
-Probabilistic model — returns both a mean surface and a per-pixel uncertainty (standard deviation). Automatically reprojects to UTM so the length-scale is in metres.
-
-```python
+# GP — also returns uncertainty grid
 from geointerpo.interpolators import MLInterpolator
-
-gp = MLInterpolator(method="gp").fit(gdf)
-mean_da, std_da = gp.predict_with_std(bbox)
+mean_da, std_da = MLInterpolator(method="gp").fit(gdf).predict_with_std(bbox)
 ```
-
-### Random Forest / Gradient Boosting
-
-Ensemble ML methods that use (x, y) coordinates as features. No smoothness assumptions — useful for discontinuous or patchy fields.
-
-```python
-method_params={"rf":  {"n_estimators": 200, "max_depth": 8}}
-method_params={"gbm": {"n_estimators": 200, "learning_rate": 0.05}}
-```
-
-### Regression Kriging
-
-Combines ML trend estimation with Kriging of the residuals. Best of both worlds for fields with both large-scale trends and local spatial structure. Requires `[kriging]` extra.
 
 ---
 
-## Direct interpolator usage
+## Direct usage
 
 ```python
-from geointerpo.interpolators import (
-    IDWInterpolator,
-    KrigingInterpolator,
-    NaturalNeighborInterpolator,
-    SplineInterpolator,
-    TrendInterpolator,
-    RBFInterpolator,
-    GridDataInterpolator,
-    MLInterpolator,
-    RegressionKrigingInterpolator,
-)
+from geointerpo.interpolators import KrigingInterpolator
 
 model = KrigingInterpolator(variogram_model="spherical")
-model.fit(gdf)                                    # GeoDataFrame with Point geometry + 'value' column
-grid  = model.predict(bbox, resolution=0.25)      # xr.DataArray (WGS-84)
-cv    = model.cross_validate(gdf, k=5)            # blocked spatial k-fold CV
+model.fit(gdf)                              # GeoDataFrame with Point geometry + 'value'
+grid  = model.predict(bbox, resolution=0.25)  # xr.DataArray (WGS-84)
+cv    = model.cross_validate(gdf, k=5)        # blocked spatial k-fold CV
 ```
 
 → Full parameter reference in [API: Interpolators](api/interpolators.md)

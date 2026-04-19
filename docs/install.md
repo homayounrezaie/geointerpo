@@ -1,80 +1,103 @@
 # Install
 
-## Core install
-
-```bash
-pip install geointerpo
-```
-
-The core package includes IDW, RBF, spline, griddata, boundary loading, and the Pipeline. No API keys needed.
-
-## Recommended install
+## Recommended
 
 ```bash
 pip install "geointerpo[full]"
 ```
 
-Adds kriging, ML methods, GeoTIFF export, all three data APIs, and matplotlib. Everything except GEE and interactive notebooks.
+Adds kriging, ML methods, GeoTIFF export, all three data APIs, and matplotlib. Covers 95% of use cases.
 
-## Extras
-
-Install only what you need:
+## Core only
 
 ```bash
-pip install "geointerpo[kriging]"     # Ordinary/Universal Kriging + GP/RF/GBM via pykrige + sklearn
-pip install "geointerpo[raster]"      # GeoTIFF export + boundary clipping via rasterio + rioxarray
-pip install "geointerpo[data]"        # Live weather/air-quality APIs (Meteostat, OpenAQ, Open-Meteo)
-pip install "geointerpo[gee]"         # Google Earth Engine validation (also needs earthengine authenticate)
-pip install "geointerpo[viz]"         # Static matplotlib plots
-pip install "geointerpo[dem]"         # SRTM elevation covariate via srtm.py
-pip install "geointerpo[geo]"         # Named-location geocoding via geopy
-pip install "geointerpo[notebooks]"   # leafmap + geemap + Jupyter (interactive maps in notebooks)
+pip install geointerpo
 ```
 
-### What each extra unlocks
+Includes IDW, RBF, spline, griddata, boundary loading, and the Pipeline. No kriging, no ML, no APIs.
 
-| Extra | Packages added | Unlocks |
+## Pick your extras
+
+=== "Kriging & ML"
+    ```bash
+    pip install "geointerpo[kriging]"
+    ```
+    Unlocks `kriging`, `uk`, `gp`, `rf`, `gbm`, `rk` methods via **pykrige** + **scikit-learn**.
+
+=== "Raster I/O"
+    ```bash
+    pip install "geointerpo[raster]"
+    ```
+    GeoTIFF export and boundary polygon clipping via **rasterio** + **rioxarray**.
+
+=== "Live Data APIs"
+    ```bash
+    pip install "geointerpo[data]"
+    ```
+    `data="meteostat"`, `data="openaq"`, `data="openmeteo"` — no API keys needed.
+
+=== "GEE Validation"
+    ```bash
+    pip install "geointerpo[gee]"
+    earthengine authenticate
+    ```
+    Compare against MODIS, CHIRPS, Sentinel-5P via **earthengine-api**.
+
+=== "Visualization"
+    ```bash
+    pip install "geointerpo[viz]"
+    ```
+    `result.plot()` and all `viz.*` helpers via **matplotlib**.
+
+=== "Notebooks"
+    ```bash
+    pip install "geointerpo[notebooks]"
+    ```
+    Interactive maps in Jupyter via **leafmap** + **geemap**.
+
+---
+
+## Extras at a glance
+
+| Extra | Packages | Unlocks |
 |---|---|---|
-| `kriging` | `pykrige`, `scikit-learn` | `"kriging"`, `"uk"`, `"gp"`, `"rf"`, `"gbm"`, `"rk"` methods |
-| `raster` | `rasterio`, `rioxarray` | `result.save()` GeoTIFF, `clip_to_boundary=True` |
-| `data` | `meteostat`, `openaq`, `openmeteo-requests` | `data="meteostat"`, `data="openaq"`, `data="openmeteo"` |
-| `gee` | `earthengine-api` | `validate_with_gee=True`, MODIS/CHIRPS/Sentinel comparison |
-| `viz` | `matplotlib` | `result.plot()`, `viz.plot_interpolated()` |
-| `dem` | `srtm.py` | `include_dem=True` SRTM elevation covariate |
-| `geo` | `geopy` | `boundary="Tehran, Iran"` named-location geocoding |
-| `notebooks` | `leafmap`, `geemap`, `jupyter` | Interactive maps in Jupyter notebooks |
-| `full` | all of the above except GEE + notebooks | Recommended for local data science work |
-| `dev` | `full` + GEE + notebooks + pytest + ruff | Contributors and CI |
+| `kriging` | pykrige, scikit-learn | Kriging, GP, RF, GBM, RK methods |
+| `raster` | rasterio, rioxarray | GeoTIFF export, boundary clipping |
+| `data` | meteostat, openaq, openmeteo-requests | Live weather & air quality APIs |
+| `gee` | earthengine-api | MODIS / CHIRPS / Sentinel validation |
+| `viz` | matplotlib | Static plots |
+| `dem` | srtm.py | SRTM elevation covariate |
+| `geo` | geopy | Named-location geocoding |
+| `notebooks` | leafmap, geemap, jupyter | Interactive maps |
+| `full` | all above except GEE & notebooks | Recommended for data science |
+| `dev` | full + GEE + notebooks + pytest | Contributors |
 
-## Install from source
+---
+
+## From source
 
 ```bash
 git clone https://github.com/homayounrezaie/geonterpo
-cd geointerpo
+cd geonterpo
 pip install -e ".[full]"
 ```
 
-Editable install — changes to the source take effect immediately without reinstalling.
+!!! note
+    Editable install — changes to the source take effect immediately without reinstalling.
 
 ## GEE authentication
 
-Required only if you use `validate_with_gee=True`:
+!!! warning "One-time setup required"
+    GEE validation (`validate_with_gee=True`) requires a one-time browser auth:
 
-```bash
-pip install "geointerpo[gee]"
-earthengine authenticate
-```
-
-This opens a browser for a one-time OAuth flow. Credentials are cached locally.
+    ```bash
+    pip install "geointerpo[gee]"
+    earthengine authenticate
+    ```
 
 ## Verify
 
 ```bash
 python -c "import geointerpo; print(geointerpo.__version__)"
-```
-
-Or run the offline demo:
-
-```bash
 python examples/quickstart.py
 ```
