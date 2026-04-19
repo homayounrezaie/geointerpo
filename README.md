@@ -101,38 +101,6 @@ Capture non-linear spatial patterns. GP also returns a per-pixel uncertainty sur
 
 `gp` (Gaussian Process) · `rf` (Random Forest) · `gbm` (Gradient Boosting) · `rk` (Regression Kriging)
 
-<details>
-<summary>See all 15 methods</summary>
-<br/>
-<table>
-<tr>
-  <td align="center"><img src="outputs/methods/idw.png" width="200"/><br/><b>IDW</b></td>
-  <td align="center"><img src="outputs/methods/kriging.png" width="200"/><br/><b>Ordinary Kriging</b></td>
-  <td align="center"><img src="outputs/methods/uk.png" width="200"/><br/><b>Universal Kriging</b></td>
-</tr>
-<tr>
-  <td align="center"><img src="outputs/methods/natural_neighbor.png" width="200"/><br/><b>Natural Neighbor</b></td>
-  <td align="center"><img src="outputs/methods/spline.png" width="200"/><br/><b>Spline (Regularized)</b></td>
-  <td align="center"><img src="outputs/methods/spline_tension.png" width="200"/><br/><b>Spline Tension</b></td>
-</tr>
-<tr>
-  <td align="center"><img src="outputs/methods/trend.png" width="200"/><br/><b>Trend Surface</b></td>
-  <td align="center"><img src="outputs/methods/rbf.png" width="200"/><br/><b>RBF</b></td>
-  <td align="center"><img src="outputs/methods/nearest.png" width="200"/><br/><b>Nearest Neighbor</b></td>
-</tr>
-<tr>
-  <td align="center"><img src="outputs/methods/linear.png" width="200"/><br/><b>Linear (Delaunay)</b></td>
-  <td align="center"><img src="outputs/methods/cubic.png" width="200"/><br/><b>Cubic (Clough-Tocher)</b></td>
-  <td align="center"><img src="outputs/methods/gp.png" width="200"/><br/><b>Gaussian Process</b></td>
-</tr>
-<tr>
-  <td align="center"><img src="outputs/methods/rf.png" width="200"/><br/><b>Random Forest</b></td>
-  <td align="center"><img src="outputs/methods/gbm.png" width="200"/><br/><b>Gradient Boosting</b></td>
-  <td align="center"><img src="outputs/methods/rk.png" width="200"/><br/><b>Regression Kriging</b></td>
-</tr>
-</table>
-</details>
-
 ---
 
 ## References
