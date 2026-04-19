@@ -9,7 +9,11 @@
 
 <p align="center">
   Spatial interpolation for Python — 15 algorithms, live data APIs, boundary clipping, and GEE validation.<br/>
-  Drop in point data, get a smooth interpolated raster out.
+  Drop in point data, get a smooth interpolated raster out.<br/><br/>
+  Fetch live weather, air quality, or precipitation data from <b>Meteostat</b>, <b>OpenAQ</b>, and <b>Open-Meteo</b>.<br/>
+  Define your study area by place name, polygon file, or bounding box — boundaries are resolved automatically.<br/>
+  Validate results against <b>MODIS</b>, <b>CHIRPS</b>, and <b>Sentinel-5P</b> satellite products via Google Earth Engine.<br/>
+  Export to <b>GeoTIFF</b> or <b>NetCDF</b>, run spatial cross-validation, and compare methods side by side.
 </p>
 
 <p align="center">
