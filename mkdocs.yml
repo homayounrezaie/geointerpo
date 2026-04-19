@@ -1,7 +1,7 @@
 site_name: geointerpo
 site_description: Python spatial interpolation toolkit — boundaries, point data, 15 methods, raster export, validation
 site_author: Ali Rezaie
-site_url: https://homayounrezaie.github.io/geonterpo/
+site_url: https://homayounrezaie.github.io/geonterpo
 repo_url: https://github.com/homayounrezaie/geonterpo
 repo_name: homayounrezaie/geonterpo
 edit_uri: edit/main/docs/
