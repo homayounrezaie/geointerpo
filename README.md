@@ -1,8 +1,35 @@
 # geointerpo
 
-Python spatial interpolation toolkit — 15 methods, boundaries, point data, raster export.
+<p align="center">
+  <img src="https://img.shields.io/badge/python-3.9%2B-blue?style=flat-square"/>
+  <img src="https://img.shields.io/badge/methods-15-teal?style=flat-square"/>
+  <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square"/>
+  <img src="https://img.shields.io/badge/docs-online-orange?style=flat-square"/>
+</p>
 
-**[Documentation](https://homayounrezaie.github.io/geonterpo)** · [Install](https://homayounrezaie.github.io/geonterpo/install/) · [Quickstart](https://homayounrezaie.github.io/geonterpo/quickstart/) · [Methods](https://homayounrezaie.github.io/geonterpo/interpolators/) · [Examples](https://homayounrezaie.github.io/geonterpo/examples/)
+<p align="center">
+  Spatial interpolation for Python — 15 algorithms, live data APIs, boundary clipping, and GEE validation.<br/>
+  Drop in point data, get a smooth interpolated raster out.
+</p>
+
+<p align="center">
+  <a href="https://homayounrezaie.github.io/geonterpo"><b>📖 Documentation</b></a> ·
+  <a href="https://homayounrezaie.github.io/geonterpo/install/">Install</a> ·
+  <a href="https://homayounrezaie.github.io/geonterpo/quickstart/">Quickstart</a> ·
+  <a href="https://homayounrezaie.github.io/geonterpo/interpolators/">Methods</a> ·
+  <a href="https://homayounrezaie.github.io/geonterpo/examples/">Examples</a>
+</p>
+
+---
+
+<p align="center">
+  <img src="outputs/methods/kriging.png" width="270"/>
+  &nbsp;&nbsp;
+  <img src="outputs/methods/natural_neighbor.png" width="270"/>
+  &nbsp;&nbsp;
+  <img src="outputs/methods/gp.png" width="270"/>
+</p>
+<p align="center"><i>Ordinary Kriging · Natural Neighbor · Gaussian Process — same 60 stations, Alberta, Canada</i></p>
 
 ---
 
@@ -18,54 +45,93 @@ pip install "geointerpo[full]"
 from geointerpo import Pipeline
 
 result = Pipeline(
-    data="stations.csv",
-    boundary="Calgary, Alberta, Canada",
+    data="stations.csv",               # CSV, GeoDataFrame, or live API
+    boundary="Calgary, Alberta",       # place name, bbox, or polygon file
     method=["idw", "kriging", "spline"],
 ).run()
 
-result.plot()
-result.save("outputs/")
+result.plot()            # side-by-side comparison
+result.metrics_table()   # cross-validation RMSE / r
+result.save("outputs/")  # GeoTIFF + PNG + CSV
 ```
 
 ---
 
-## Method Gallery
+## Methods
 
-15 algorithms on the same dataset — 60 weather stations, Alberta, Canada:
+geointerpo covers the full ArcGIS Spatial Analyst interpolation toolkit plus modern ML methods. All share the same interface — swap `method=` to compare.
 
+### Classical
+
+Fast and assumption-free. Good as a baseline or when data is dense.
+
+<p align="center">
+  <img src="outputs/methods/idw.png" width="230"/>
+  &nbsp;
+  <img src="outputs/methods/rbf.png" width="230"/>
+  &nbsp;
+  <img src="outputs/methods/spline.png" width="230"/>
+</p>
+
+`idw` · `rbf` · `spline` · `spline_tension` · `trend` · `nearest` · `linear` · `cubic`
+
+### Geostatistical
+
+Account for spatial autocorrelation. Produce statistically optimal estimates with cross-validation metrics.
+
+<p align="center">
+  <img src="outputs/methods/kriging.png" width="340"/>
+  &nbsp;&nbsp;
+  <img src="outputs/methods/natural_neighbor.png" width="340"/>
+</p>
+
+`kriging` · `uk` (Universal Kriging) · `natural_neighbor`
+
+### Machine Learning
+
+Capture non-linear spatial patterns. GP also returns a per-pixel uncertainty surface.
+
+<p align="center">
+  <img src="outputs/methods/gp.png" width="230"/>
+  &nbsp;
+  <img src="outputs/methods/rf.png" width="230"/>
+  &nbsp;
+  <img src="outputs/methods/rk.png" width="230"/>
+</p>
+
+`gp` (Gaussian Process) · `rf` (Random Forest) · `gbm` (Gradient Boosting) · `rk` (Regression Kriging)
+
+<details>
+<summary>See all 15 methods</summary>
+<br/>
 <table>
 <tr>
-  <td align="center"><img src="outputs/methods/idw.png" width="220"/><br/><b>IDW</b></td>
-  <td align="center"><img src="outputs/methods/kriging.png" width="220"/><br/><b>Ordinary Kriging</b></td>
-  <td align="center"><img src="outputs/methods/uk.png" width="220"/><br/><b>Universal Kriging</b></td>
+  <td align="center"><img src="outputs/methods/idw.png" width="200"/><br/><b>IDW</b></td>
+  <td align="center"><img src="outputs/methods/kriging.png" width="200"/><br/><b>Ordinary Kriging</b></td>
+  <td align="center"><img src="outputs/methods/uk.png" width="200"/><br/><b>Universal Kriging</b></td>
 </tr>
 <tr>
-  <td align="center"><img src="outputs/methods/natural_neighbor.png" width="220"/><br/><b>Natural Neighbor</b></td>
-  <td align="center"><img src="outputs/methods/spline.png" width="220"/><br/><b>Spline (Regularized)</b></td>
-  <td align="center"><img src="outputs/methods/spline_tension.png" width="220"/><br/><b>Spline Tension</b></td>
+  <td align="center"><img src="outputs/methods/natural_neighbor.png" width="200"/><br/><b>Natural Neighbor</b></td>
+  <td align="center"><img src="outputs/methods/spline.png" width="200"/><br/><b>Spline (Regularized)</b></td>
+  <td align="center"><img src="outputs/methods/spline_tension.png" width="200"/><br/><b>Spline Tension</b></td>
 </tr>
 <tr>
-  <td align="center"><img src="outputs/methods/trend.png" width="220"/><br/><b>Trend Surface</b></td>
-  <td align="center"><img src="outputs/methods/rbf.png" width="220"/><br/><b>RBF</b></td>
-  <td align="center"><img src="outputs/methods/nearest.png" width="220"/><br/><b>Nearest Neighbor</b></td>
+  <td align="center"><img src="outputs/methods/trend.png" width="200"/><br/><b>Trend Surface</b></td>
+  <td align="center"><img src="outputs/methods/rbf.png" width="200"/><br/><b>RBF</b></td>
+  <td align="center"><img src="outputs/methods/nearest.png" width="200"/><br/><b>Nearest Neighbor</b></td>
 </tr>
 <tr>
-  <td align="center"><img src="outputs/methods/linear.png" width="220"/><br/><b>Linear (Delaunay)</b></td>
-  <td align="center"><img src="outputs/methods/cubic.png" width="220"/><br/><b>Cubic (Clough-Tocher)</b></td>
-  <td align="center"><img src="outputs/methods/gp.png" width="220"/><br/><b>Gaussian Process</b></td>
+  <td align="center"><img src="outputs/methods/linear.png" width="200"/><br/><b>Linear (Delaunay)</b></td>
+  <td align="center"><img src="outputs/methods/cubic.png" width="200"/><br/><b>Cubic (Clough-Tocher)</b></td>
+  <td align="center"><img src="outputs/methods/gp.png" width="200"/><br/><b>Gaussian Process</b></td>
 </tr>
 <tr>
-  <td align="center"><img src="outputs/methods/rf.png" width="220"/><br/><b>Random Forest</b></td>
-  <td align="center"><img src="outputs/methods/gbm.png" width="220"/><br/><b>Gradient Boosting</b></td>
-  <td align="center"><img src="outputs/methods/rk.png" width="220"/><br/><b>Regression Kriging</b></td>
+  <td align="center"><img src="outputs/methods/rf.png" width="200"/><br/><b>Random Forest</b></td>
+  <td align="center"><img src="outputs/methods/gbm.png" width="200"/><br/><b>Gradient Boosting</b></td>
+  <td align="center"><img src="outputs/methods/rk.png" width="200"/><br/><b>Regression Kriging</b></td>
 </tr>
 </table>
-
----
-
-## Stack
-
-`scipy` · `geopandas` · `shapely` · `pyproj` · `xarray` · `pykrige` · `scikit-learn` · `rasterio` · `matplotlib`
+</details>
 
 ---
 
