@@ -27,11 +27,11 @@
 ---
 
 <p align="center">
-  <img src="outputs/methods/kriging.png" width="270"/>
+  <img src="https://raw.githubusercontent.com/homayounrezaie/geonterpo/main/outputs/methods/kriging.png" width="270"/>
   &nbsp;&nbsp;
-  <img src="outputs/methods/natural_neighbor.png" width="270"/>
+  <img src="https://raw.githubusercontent.com/homayounrezaie/geonterpo/main/outputs/methods/natural_neighbor.png" width="270"/>
   &nbsp;&nbsp;
-  <img src="outputs/methods/gp.png" width="270"/>
+  <img src="https://raw.githubusercontent.com/homayounrezaie/geonterpo/main/outputs/methods/gp.png" width="270"/>
 </p>
 <p align="center"><i>Ordinary Kriging · Natural Neighbor · Gaussian Process — same 60 stations, Alberta, Canada</i></p>
 
@@ -70,13 +70,13 @@ geointerpo covers the full ArcGIS Spatial Analyst interpolation toolkit plus mod
 The fastest methods — no statistical assumptions, exact at data points. Ideal as a quick baseline or when data is dense and evenly distributed.
 
 <p align="center">
-  <img src="outputs/methods/idw.png" width="220"/>
+  <img src="https://raw.githubusercontent.com/homayounrezaie/geonterpo/main/outputs/methods/idw.png" width="220"/>
   &nbsp;
-  <img src="outputs/methods/nearest.png" width="220"/>
+  <img src="https://raw.githubusercontent.com/homayounrezaie/geonterpo/main/outputs/methods/nearest.png" width="220"/>
   &nbsp;
-  <img src="outputs/methods/linear.png" width="220"/>
+  <img src="https://raw.githubusercontent.com/homayounrezaie/geonterpo/main/outputs/methods/linear.png" width="220"/>
   &nbsp;
-  <img src="outputs/methods/cubic.png" width="220"/>
+  <img src="https://raw.githubusercontent.com/homayounrezaie/geonterpo/main/outputs/methods/cubic.png" width="220"/>
 </p>
 
 `idw` · `nearest` · `linear` · `cubic`
@@ -86,13 +86,13 @@ The fastest methods — no statistical assumptions, exact at data points. Ideal 
 Fit smooth continuous surfaces. Splines minimise curvature; RBF offers eight kernel choices; Trend fits a global polynomial for large-scale patterns.
 
 <p align="center">
-  <img src="outputs/methods/spline.png" width="220"/>
+  <img src="https://raw.githubusercontent.com/homayounrezaie/geonterpo/main/outputs/methods/spline.png" width="220"/>
   &nbsp;
-  <img src="outputs/methods/spline_tension.png" width="220"/>
+  <img src="https://raw.githubusercontent.com/homayounrezaie/geonterpo/main/outputs/methods/spline_tension.png" width="220"/>
   &nbsp;
-  <img src="outputs/methods/rbf.png" width="220"/>
+  <img src="https://raw.githubusercontent.com/homayounrezaie/geonterpo/main/outputs/methods/rbf.png" width="220"/>
   &nbsp;
-  <img src="outputs/methods/trend.png" width="220"/>
+  <img src="https://raw.githubusercontent.com/homayounrezaie/geonterpo/main/outputs/methods/trend.png" width="220"/>
 </p>
 
 `spline` · `spline_tension` · `rbf` · `trend`
@@ -102,11 +102,11 @@ Fit smooth continuous surfaces. Splines minimise curvature; RBF offers eight ker
 Account for spatial autocorrelation via a variogram model. Produce statistically optimal, unbiased estimates. Natural Neighbor uses Voronoi area-stealing weights — smooth and exact at data locations.
 
 <p align="center">
-  <img src="outputs/methods/kriging.png" width="290"/>
+  <img src="https://raw.githubusercontent.com/homayounrezaie/geonterpo/main/outputs/methods/kriging.png" width="290"/>
   &nbsp;
-  <img src="outputs/methods/uk.png" width="290"/>
+  <img src="https://raw.githubusercontent.com/homayounrezaie/geonterpo/main/outputs/methods/uk.png" width="290"/>
   &nbsp;
-  <img src="outputs/methods/natural_neighbor.png" width="290"/>
+  <img src="https://raw.githubusercontent.com/homayounrezaie/geonterpo/main/outputs/methods/natural_neighbor.png" width="290"/>
 </p>
 
 `kriging` (Ordinary) · `uk` (Universal) · `natural_neighbor`
@@ -116,13 +116,13 @@ Account for spatial autocorrelation via a variogram model. Produce statistically
 Capture non-linear spatial patterns. GP returns a full uncertainty surface alongside the mean prediction. Regression Kriging combines an ML trend with Kriging of the residuals.
 
 <p align="center">
-  <img src="outputs/methods/gp.png" width="220"/>
+  <img src="https://raw.githubusercontent.com/homayounrezaie/geonterpo/main/outputs/methods/gp.png" width="220"/>
   &nbsp;
-  <img src="outputs/methods/rf.png" width="220"/>
+  <img src="https://raw.githubusercontent.com/homayounrezaie/geonterpo/main/outputs/methods/rf.png" width="220"/>
   &nbsp;
-  <img src="outputs/methods/gbm.png" width="220"/>
+  <img src="https://raw.githubusercontent.com/homayounrezaie/geonterpo/main/outputs/methods/gbm.png" width="220"/>
   &nbsp;
-  <img src="outputs/methods/rk.png" width="220"/>
+  <img src="https://raw.githubusercontent.com/homayounrezaie/geonterpo/main/outputs/methods/rk.png" width="220"/>
 </p>
 
 `gp` (Gaussian Process) · `rf` (Random Forest) · `gbm` (Gradient Boosting) · `rk` (Regression Kriging)
