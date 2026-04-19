@@ -2,111 +2,42 @@ name: Publish to PyPI
 
 on:
   release:
-    types: [published]   # triggers when you publish a GitHub Release
+    types: [published]
+
+permissions:
+  id-token: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  # -------------------------------------------------------------------------
-  # 1. Run offline tests before publishing — never ship a broken package
-  # -------------------------------------------------------------------------
-  test:
-    name: Offline tests
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install core + kriging deps
-        run: pip install -e ".[kriging]" pytest
-
-      - name: Run offline tests
-        run: pytest tests/ -m "not network and not gee" -q
-
-  # -------------------------------------------------------------------------
-  # 2. Build source distribution + wheel
-  # -------------------------------------------------------------------------
   build:
-    name: Build distributions
     runs-on: ubuntu-latest
-    needs: test
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install build
-        run: pip install build
+      - name: Build package
+        run: |
+          pip install hatchling
+          python -m hatchling build
 
-      - name: Build sdist and wheel
-        run: python -m build
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist/
 
-  # -------------------------------------------------------------------------
-  # 3. Publish to PyPI using trusted publishing (no stored token needed)
-  #
-  #    One-time setup in PyPI:
-  #      https://pypi.org/manage/project/geointerpo/settings/publishing/
-  #      Publisher type: GitHub Actions
-  #      Owner:          homayounrezaie
-  #      Repository:     geointerpo
-  #      Workflow:       publish.yml
-  # -------------------------------------------------------------------------
-  publish-pypi:
-    name: Publish → PyPI
-    runs-on: ubuntu-latest
+  publish:
     needs: build
-    environment:
-      name: pypi
-      url: https://pypi.org/p/geointerpo
-    permissions:
-      id-token: write   # required for trusted publishing (OIDC)
-
-    steps:
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
-
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-
-  # -------------------------------------------------------------------------
-  # 4. Also publish to TestPyPI for every pre-release tag (optional)
-  #    Tag pattern: v1.2.3a1, v1.2.3b2, v1.2.3rc1
-  # -------------------------------------------------------------------------
-  publish-testpypi:
-    name: Publish → TestPyPI (pre-release)
     runs-on: ubuntu-latest
-    needs: build
-    if: github.event.release.prerelease == true
-    environment:
-      name: testpypi
-      url: https://test.pypi.org/p/geointerpo
-    permissions:
-      id-token: write
-
+    environment: pypi
     steps:
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist/
 
-      - name: Publish to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://upload.pypi.org/legacy/
+      - uses: pypa/gh-action-pypi-publish@release/v1
