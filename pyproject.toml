@@ -9,7 +9,7 @@ description = "Spatial interpolation toolkit — boundaries, point data, 15 meth
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.9"
-authors = [{ name = "Ali Rezaie", email = "homayounrezaie@gmail.com" }]
+authors = [{ name = "Homayoun Rezaie", email = "homayounrezaie@gmail.com" }]
 keywords = ["geostatistics", "interpolation", "kriging", "spatial", "idw", "weather", "air-quality"]
 classifiers = [
     "Development Status :: 3 - Alpha",
