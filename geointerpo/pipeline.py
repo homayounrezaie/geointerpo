@@ -322,6 +322,7 @@ class Pipeline:
         cv_folds: int = 5,
         search_radius: SearchRadius | None = None,
         openaq_api_key: str | None = None,
+        gee_project: str | None = None,
         # --- backward-compat aliases ---
         source: str | None = None,
         location=None,
@@ -349,6 +350,7 @@ class Pipeline:
         self.cv_folds = cv_folds
         self.search_radius = search_radius
         self.openaq_api_key = openaq_api_key
+        self.gee_project = gee_project
         # backward-compat: 'source' and 'location' still accepted
         self._source = source  # explicit API source override
         self._location = location  # explicit geocoded location (old API)
@@ -398,7 +400,7 @@ class Pipeline:
             gee_variable = _variable_to_gee(self.variable)
             if gee_variable:
                 from geointerpo.validation.gee_validator import GEEValidator
-                validator = GEEValidator(variable=gee_variable, date=self.date)
+                validator = GEEValidator(variable=gee_variable, date=self.date, project=self.gee_project)
                 gee_reference = validator.fetch_reference(bbox=bbox, resolution=self.resolution)
                 primary_grid = grids[self.methods[0]]
                 gee_metrics = validator.compare(primary_grid, gee_reference)

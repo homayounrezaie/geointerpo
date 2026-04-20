@@ -79,22 +79,26 @@ class GEEValidator:
             import ee
         except ImportError as exc:
             raise ImportError("Install earthengine-api: pip install earthengine-api") from exc
+
+        # Skip initialization if EE is already ready (user ran auth cell above)
+        try:
+            ee.data.getInfo("/")
+            self._ee = ee
+            return
+        except Exception:
+            pass
+
         try:
             import geemap
             geemap.ee_initialize(project=self.project)
         except ImportError:
-            # geemap not available — fall back to plain ee auth
-            try:
-                if self.project:
-                    ee.Initialize(project=self.project)
-                else:
-                    ee.Initialize()
-            except Exception:
-                ee.Authenticate()
-                if self.project:
-                    ee.Initialize(project=self.project)
-                else:
-                    ee.Initialize()
+            if self.project:
+                ee.Initialize(project=self.project)
+            else:
+                raise RuntimeError(
+                    "GEE project not found. Pass gee_project= to Pipeline or call "
+                    "geemap.ee_initialize(project='your-project') before running."
+                )
         self._ee = ee
 
     def fetch_reference(self, bbox: BBox, resolution: float = 0.1) -> xr.DataArray:
