@@ -56,12 +56,6 @@ data = [
     "openaq>=0.7",
     "tqdm>=4.65",
 ]
-# Google Earth Engine validation (requires earthengine authenticate)
-gee = [
-    "earthengine-api>=0.1.390",
-    "rasterio>=1.3",
-    "rioxarray>=0.15",
-]
 # Static visualization helpers (matplotlib only)
 viz = [
     "matplotlib>=3.7",
@@ -99,7 +93,7 @@ notebooks = [
     "ipykernel",
     "nbformat",
 ]
-# Dev tooling — full + GEE + notebooks + testing
+# Dev tooling — full + notebooks + testing
 dev = [
     "pykrige>=1.7",
     "scikit-learn>=1.3",
@@ -114,9 +108,7 @@ dev = [
     "matplotlib>=3.7",
     "geopy>=2.4",
     "srtm.py>=0.3.5",
-    "earthengine-api>=0.1.390",
     "leafmap>=0.30",
-    "geemap>=0.30",
     "jupyter",
     "ipykernel",
     "pytest>=7",

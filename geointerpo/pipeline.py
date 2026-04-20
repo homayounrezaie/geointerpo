@@ -73,8 +73,6 @@ class InterpolationResult:
     dem: xr.DataArray | None = None             # elevation grid (if requested)
     grids: dict[str, xr.DataArray] = field(default_factory=dict)  # all methods
     cv_metrics: dict[str, dict] = field(default_factory=dict)      # per-method CV
-    gee_metrics: dict | None = None             # GEE validation metrics
-    gee_reference: xr.DataArray | None = None   # GEE reference raster
     boundary: gpd.GeoDataFrame | None = None    # study-area boundary
     method: str = "kriging"
     variable: str = "value"
@@ -318,11 +316,9 @@ class Pipeline:
         # --- advanced ---
         include_dem: bool = False,
         dem_source: str = "auto",
-        validate_with_gee: bool = False,
         cv_folds: int = 5,
         search_radius: SearchRadius | None = None,
         openaq_api_key: str | None = None,
-        gee_project: str | None = None,
         # --- backward-compat aliases ---
         source: str | None = None,
         location=None,
@@ -346,11 +342,9 @@ class Pipeline:
         self.clip_to_boundary = clip_to_boundary
         self.include_dem = include_dem
         self.dem_source = dem_source
-        self.validate_with_gee = validate_with_gee
         self.cv_folds = cv_folds
         self.search_radius = search_radius
         self.openaq_api_key = openaq_api_key
-        self.gee_project = gee_project
         # backward-compat: 'source' and 'location' still accepted
         self._source = source  # explicit API source override
         self._location = location  # explicit geocoded location (old API)
@@ -393,25 +387,6 @@ class Pipeline:
         if boundary_gdf is not None and self.clip_to_boundary:
             grids = self._clip_grids(grids, boundary_gdf)
 
-        gee_metrics = None
-        gee_reference = None
-        if self.validate_with_gee:
-            print("[5/5] Validating against GEE…")
-            gee_variable = _variable_to_gee(self.variable)
-            if gee_variable:
-                from geointerpo.validation.gee_validator import GEEValidator
-                validator = GEEValidator(variable=gee_variable, date=self.date, project=self.gee_project)
-                gee_reference = validator.fetch_reference(bbox=bbox, resolution=self.resolution)
-                primary_grid = grids[self.methods[0]]
-                gee_metrics = validator.compare(primary_grid, gee_reference)
-                rmse = gee_metrics.get("rmse", float("nan"))
-                r = gee_metrics.get("r", float("nan"))
-                print(f"      GEE validation: RMSE={rmse:.3f}  r={r:.3f}")
-            else:
-                print(f"      No GEE dataset mapped for variable '{self.variable}' — skipping")
-        else:
-            print(f"[5/5] Skipping GEE validation")
-
         primary = grids[self.methods[0]]
         return InterpolationResult(
             grid=primary,
@@ -419,8 +394,6 @@ class Pipeline:
             dem=dem,
             grids=grids,
             cv_metrics=cv_metrics,
-            gee_metrics=gee_metrics,
-            gee_reference=gee_reference,
             boundary=boundary_gdf,
             method=self.methods[0],
             variable=self.variable,
@@ -723,18 +696,6 @@ def _ensure_value_col(gdf: gpd.GeoDataFrame, value_col: str) -> gpd.GeoDataFrame
 def _yesterday() -> str:
     import pandas as pd
     return (pd.Timestamp.today() - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
-
-
-def _variable_to_gee(variable: str) -> str | None:
-    return {
-        "temperature": "temperature",
-        "tavg": "temperature",
-        "precipitation": "precipitation",
-        "prcp": "precipitation",
-        "pm25": "pm25",
-        "no2": "no2",
-        "o3": "o3",
-    }.get(variable.lower())
 
 
 def _apply_variable_radius(gdf: gpd.GeoDataFrame, n: int) -> gpd.GeoDataFrame:

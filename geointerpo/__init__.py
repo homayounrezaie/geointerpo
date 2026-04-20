@@ -1,22 +1,20 @@
 """geointerpo — spatial interpolation toolkit.
 
-All imports are lazy: optional heavy dependencies (pykrige, earthengine-api,
-meteostat, …) are only loaded when the relevant class is first used.
+All imports are lazy: optional heavy dependencies (pykrige, meteostat, …)
+are only loaded when the relevant class is first used.
 """
 
 from __future__ import annotations
 
-__version__ = "0.1.0"
+__version__ = "0.1.4"
 
 # Canonical method list (mirrors ALL_METHODS in pipeline.py)
 METHODS = [
-    # ArcGIS tools
     "idw",
     "kriging", "ok", "uk",
     "natural_neighbor",
     "spline", "spline_tension",
     "trend",
-    # Additional
     "rbf",
     "nearest", "linear", "cubic",
     "gp", "rf", "gbm",
@@ -31,7 +29,6 @@ def __getattr__(name: str):
         "SplineInterpolator", "TrendInterpolator", "RegressionKrigingInterpolator",
     }
     _sources = {"MeteostatSource", "OpenAQSource", "OpenMeteoSource"}
-    _validation = {"compute_metrics", "GEEValidator"}
 
     if name in _interpolators:
         import importlib
@@ -44,9 +41,6 @@ def __getattr__(name: str):
     if name == "compute_metrics":
         from geointerpo.validation.metrics import compute_metrics
         return compute_metrics
-    if name == "GEEValidator":
-        from geointerpo.validation.gee_validator import GEEValidator
-        return GEEValidator
     if name == "Pipeline":
         from geointerpo.pipeline import Pipeline
         return Pipeline
@@ -76,7 +70,6 @@ __all__ = [
     "OpenMeteoSource",
     # Validation
     "compute_metrics",
-    "GEEValidator",
     # Constants
     "METHODS",
 ]

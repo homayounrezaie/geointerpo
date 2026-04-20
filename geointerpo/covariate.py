@@ -1,9 +1,8 @@
 """Covariate helpers — elevation (DEM) and land cover.
 
 DEM sources (in priority order):
-  1. GEE SRTM   — if earthengine-api is authenticated.
-  2. srtm.py    — lightweight pure-Python SRTM downloader (pip install srtm.py).
-  3. Synthetic  — smooth procedural surface, so offline demos always work.
+  1. srtm.py    — lightweight pure-Python SRTM downloader (pip install srtm.py).
+  2. Synthetic  — smooth procedural surface, so offline demos always work.
 
 The returned DataArray matches the same lon/lat grid used by the interpolators.
 """
@@ -28,64 +27,27 @@ def fetch_dem(
     ----------
     bbox:       (min_lon, min_lat, max_lon, max_lat)
     resolution: grid spacing in degrees
-    source:     'gee' | 'srtm' | 'synthetic' | 'auto'
-                'auto' tries gee → srtm → synthetic in order.
+    source:     'srtm' | 'synthetic' | 'auto'
+                'auto' tries srtm → synthetic in order.
     """
     if source == "auto":
-        for attempt in ("gee", "srtm", "synthetic"):
+        for attempt in ("srtm", "synthetic"):
             try:
                 return fetch_dem(bbox, resolution, source=attempt)
             except Exception:
                 continue
         raise RuntimeError("All DEM sources failed")
 
-    if source == "gee":
-        return _fetch_dem_gee(bbox, resolution)
     if source == "srtm":
         return _fetch_dem_srtm(bbox, resolution)
     if source == "synthetic":
         return _fetch_dem_synthetic(bbox, resolution)
-    raise ValueError(f"Unknown DEM source '{source}'. Choose 'gee', 'srtm', 'synthetic', or 'auto'.")
+    raise ValueError(f"Unknown DEM source '{source}'. Choose 'srtm', 'synthetic', or 'auto'.")
 
 
 # ---------------------------------------------------------------------------
 # Source implementations
 # ---------------------------------------------------------------------------
-
-def _fetch_dem_gee(bbox: BBox, resolution: float) -> xr.DataArray:
-    try:
-        import ee
-    except ImportError as e:
-        raise ImportError("Install earthengine-api: pip install 'geointerpo[gee]'") from e
-
-    try:
-        ee.Initialize()
-    except Exception:
-        ee.Authenticate()
-        ee.Initialize()
-
-    import requests, io
-    import rioxarray  # noqa: F401
-
-    min_lon, min_lat, max_lon, max_lat = bbox
-    region = ee.Geometry.BBox(min_lon, min_lat, max_lon, max_lat)
-    scale_m = max(30, int(resolution * 111_320))
-
-    srtm = ee.Image("USGS/SRTMGL1_003").select("elevation").clip(region)
-    url = srtm.getDownloadURL({
-        "region": region,
-        "scale": scale_m,
-        "format": "GEO_TIFF",
-    })
-    resp = requests.get(url, timeout=120)
-    resp.raise_for_status()
-    with io.BytesIO(resp.content) as buf:
-        da = xr.open_dataarray(buf, engine="rasterio").squeeze(drop=True)
-    da = da.rename({"x": "lon", "y": "lat"})
-    da.name = "elevation"
-    da.attrs["source"] = "GEE SRTM"
-    return da
-
 
 def _fetch_dem_srtm(bbox: BBox, resolution: float) -> xr.DataArray:
     try:
@@ -118,7 +80,6 @@ def _fetch_dem_synthetic(bbox: BBox, resolution: float) -> xr.DataArray:
     lats = np.arange(min_lat, max_lat + resolution, resolution)
     lon_g, lat_g = np.meshgrid(lons, lats)
 
-    # mountainous wave pattern
     elev = (
         500
         + 400 * np.sin(np.radians(lon_g) * 4)
@@ -138,22 +99,13 @@ def _fetch_dem_synthetic(bbox: BBox, resolution: float) -> xr.DataArray:
 
 
 def make_covariate_fn(dem: xr.DataArray):
-    """Return a covariates_fn(xs, ys) that samples elevation at projected coords.
-
-    xs, ys are in the interpolator's projected CRS (metres).  The function
-    reprojects them back to WGS-84, then bilinearly samples the DEM.
-
-    Usage:
-        dem = fetch_dem(bbox)
-        model = MLInterpolator(method='rf', covariates_fn=make_covariate_fn(dem))
-    """
+    """Return a covariates_fn(xs, ys) that samples elevation at projected coords."""
     from scipy.interpolate import RegularGridInterpolator
 
     lons = dem.lon.values
     lats = dem.lat.values
-    values = dem.values  # shape (nlat, nlon)
+    values = dem.values
 
-    # Regular grid interpolator in lon/lat space
     _rgi = RegularGridInterpolator(
         (lats, lons), values, method="linear", bounds_error=False, fill_value=0.0
     )
