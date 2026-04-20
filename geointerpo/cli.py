@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import argparse
 import sys
-import pathlib
 
 
 def _cmd_run(args):

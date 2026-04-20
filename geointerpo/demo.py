@@ -20,7 +20,7 @@ def _run_temperature():
     from geointerpo.data import load_temperature
     from geointerpo.interpolators import (
         IDWInterpolator, RBFInterpolator, KrigingInterpolator,
-        GridDataInterpolator, MLInterpolator,
+        GridDataInterpolator,
     )
     from geointerpo import viz
 

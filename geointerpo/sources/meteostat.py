@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import Tuple, Union
+from typing import Union
 import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Point as ShapelyPoint
@@ -84,7 +84,6 @@ class MeteostatSource(BaseDataSource):
             )
 
         data = data.reset_index()
-        time_col = "time" if "time" in data.columns else data.columns[1]
         agg = data.groupby("station")[self.variable].mean().dropna().rename("value")
 
         merged = agg.to_frame().join(

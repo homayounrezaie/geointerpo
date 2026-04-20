@@ -19,7 +19,6 @@ from geointerpo.interpolators.base import BaseInterpolator
 def _voronoi_polygons(vor: Voronoi, radius: float) -> list[Polygon | None]:
     """Return shapely Polygons for each finite Voronoi region."""
     center = vor.points.mean(axis=0)
-    ptp_bound = np.ptp(vor.points, axis=0)
 
     finite_polys = []
     for point_idx, region_idx in enumerate(vor.point_region):

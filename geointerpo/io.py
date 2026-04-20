@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pathlib
-import numpy as np
 import xarray as xr
 
 
@@ -58,7 +57,6 @@ def clip_to_polygon(
         import rioxarray  # noqa: F401
     except ImportError as e:
         raise ImportError("Install rioxarray: pip install 'geointerpo[raster]'") from e
-    import geopandas as gpd
 
     da = da.rio.set_spatial_dims(x_dim="lon", y_dim="lat").rio.write_crs("EPSG:4326")
 

@@ -1,6 +1,5 @@
 import numpy as np
 import xarray as xr
-from typing import Union
 
 
 def compute_metrics(observed: np.ndarray, predicted: np.ndarray) -> dict:

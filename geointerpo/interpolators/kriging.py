@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import xarray as xr
 
-from geointerpo.interpolators.base import BaseInterpolator, _utm_crs_for_bbox
+from geointerpo.interpolators.base import BaseInterpolator
 
 try:
     from pykrige.ok import OrdinaryKriging

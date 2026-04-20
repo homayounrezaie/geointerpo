@@ -44,3 +44,11 @@ outputs/**
 !outputs/methods/
 outputs/methods/**
 !outputs/methods/*.png
+
+# Notebook cache
+notebooks/.cache/
+
+# Personal assets
+profile.jpeg
+profile.jpg
+profile.png

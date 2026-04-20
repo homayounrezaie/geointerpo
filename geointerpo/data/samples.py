@@ -8,7 +8,6 @@ deterministic across machines and Python versions.
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Point
 

@@ -201,7 +201,6 @@ def _nominatim_boundary(name: str) -> gpd.GeoDataFrame:
     except ImportError as e:
         raise ImportError("Install requests: pip install requests") from e
 
-    import json
     from shapely.geometry import shape
 
     url = "https://nominatim.openstreetmap.org/search"

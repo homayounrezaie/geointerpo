@@ -27,8 +27,6 @@ from __future__ import annotations
 
 import pathlib
 from dataclasses import dataclass, field
-from typing import Any
-
 import numpy as np
 import xarray as xr
 import geopandas as gpd
@@ -185,7 +183,6 @@ ALL_METHODS = sorted(_METHOD_ALIASES)
 
 
 def _build_model(method_key: str, extra_params: dict, covariates_fn=None):
-    from geointerpo import interpolators as _interp
     import importlib
 
     key = method_key.lower()
