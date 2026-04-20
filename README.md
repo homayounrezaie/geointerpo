@@ -17,11 +17,11 @@
 </p>
 
 <p align="center">
-  <a href="https://homayounrezaie.github.io/geonterpo"><b>📖 Documentation</b></a> ·
-  <a href="https://homayounrezaie.github.io/geonterpo/install/">Install</a> ·
-  <a href="https://homayounrezaie.github.io/geonterpo/quickstart/">Quickstart</a> ·
-  <a href="https://homayounrezaie.github.io/geonterpo/interpolators/">Methods</a> ·
-  <a href="https://homayounrezaie.github.io/geonterpo/examples/">Examples</a>
+  <a href="https://homayounrezaie.github.io/geointerpo"><b>📖 Documentation</b></a> ·
+  <a href="https://homayounrezaie.github.io/geointerpo/install/">Install</a> ·
+  <a href="https://homayounrezaie.github.io/geointerpo/quickstart/">Quickstart</a> ·
+  <a href="https://homayounrezaie.github.io/geointerpo/interpolators/">Methods</a> ·
+  <a href="https://homayounrezaie.github.io/geointerpo/examples/">Examples</a>
 </p>
 
 ---

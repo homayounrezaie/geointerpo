@@ -3,7 +3,7 @@
 ## Setup
 
 ```bash
-git clone https://github.com/homayounrezaie/geonterpo
+git clone https://github.com/homayounrezaie/geointerpo
 cd geointerpo
 pip install -e ".[dev]"
 ```

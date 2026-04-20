@@ -14,7 +14,7 @@ Point data in. Smooth interpolated raster out.
 <div class="hero-buttons" markdown>
 <a class="hero-btn hero-btn-primary" href="install/">Get Started</a>
 <a class="hero-btn hero-btn-secondary" href="interpolators/">Browse Methods</a>
-<a class="hero-btn hero-btn-secondary" href="https://github.com/homayounrezaie/geonterpo">GitHub</a>
+<a class="hero-btn hero-btn-secondary" href="https://github.com/homayounrezaie/geointerpo">GitHub</a>
 </div>
 
 </div>
@@ -177,8 +177,8 @@ All outputs below use the same 60 weather stations over Alberta, Canada.
 
 === "From source"
     ```bash
-    git clone https://github.com/homayounrezaie/geonterpo
-    cd geonterpo && pip install -e ".[full]"
+    git clone https://github.com/homayounrezaie/geointerpo
+    cd geointerpo && pip install -e ".[full]"
     ```
 
 [:octicons-arrow-right-24: Full install guide with all extras](install.md)

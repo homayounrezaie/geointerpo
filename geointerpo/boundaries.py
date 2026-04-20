@@ -211,7 +211,7 @@ def _nominatim_boundary(name: str) -> gpd.GeoDataFrame:
         "limit": 1,
         "polygon_geojson": 1,
     }
-    headers = {"User-Agent": "geointerpo/0.1 (https://github.com/homayounrezaie/geonterpo)"}
+    headers = {"User-Agent": "geointerpo/0.1 (https://github.com/homayounrezaie/geointerpo)"}
     resp = requests.get(url, params=params, headers=headers, timeout=15)
     resp.raise_for_status()
     results = resp.json()

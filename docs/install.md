@@ -77,8 +77,8 @@ Includes IDW, RBF, spline, griddata, boundary loading, and the Pipeline. No krig
 ## From source
 
 ```bash
-git clone https://github.com/homayounrezaie/geonterpo
-cd geonterpo
+git clone https://github.com/homayounrezaie/geointerpo
+cd geointerpo
 pip install -e ".[full]"
 ```
 
