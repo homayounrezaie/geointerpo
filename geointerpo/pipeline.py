@@ -321,6 +321,7 @@ class Pipeline:
         validate_with_gee: bool = False,
         cv_folds: int = 5,
         search_radius: SearchRadius | None = None,
+        openaq_api_key: str | None = None,
         # --- backward-compat aliases ---
         source: str | None = None,
         location=None,
@@ -347,6 +348,7 @@ class Pipeline:
         self.validate_with_gee = validate_with_gee
         self.cv_folds = cv_folds
         self.search_radius = search_radius
+        self.openaq_api_key = openaq_api_key
         # backward-compat: 'source' and 'location' still accepted
         self._source = source  # explicit API source override
         self._location = location  # explicit geocoded location (old API)
@@ -553,7 +555,8 @@ class Pipeline:
         if src == "openaq":
             from geointerpo.sources.openaq import OpenAQSource
             return OpenAQSource(
-                parameter=var, date_from=self.date, date_to=self.date
+                parameter=var, date_from=self.date, date_to=self.date,
+                api_key=self.openaq_api_key,
             ).fetch(fetch_bbox)
 
         if src == "openmeteo":
