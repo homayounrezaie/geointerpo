@@ -9,7 +9,7 @@ hide:
 # geointerpo
 
 Point data in. Smooth interpolated raster out.  
-15 algorithms · live weather & air-quality APIs · boundary clipping · GEE satellite validation.
+17 algorithms · live weather & air-quality APIs · uncertainty quantification · interactive maps.
 
 <div class="hero-buttons" markdown>
 <a class="hero-btn hero-btn-primary" href="install/">Get Started</a>
@@ -23,11 +23,11 @@ Point data in. Smooth interpolated raster out.
 
 <div class="grid cards" markdown>
 
--   :material-rocket-launch:{ .lg .middle } **One API, 15 methods**
+-   :material-rocket-launch:{ .lg .middle } **One API, 17 methods**
 
     ---
 
-    Every algorithm shares `.fit()` → `.predict()`. Swap `method=` to compare IDW, Kriging, GP, and 12 more without changing any other code.
+    Every algorithm shares `.fit()` → `.predict()`. Swap `method=` to compare IDW, Kriging, Cokriging, SGS, GP, and 12 more without changing any other code.
 
     [:octicons-arrow-right-24: Browse methods](interpolators.md)
 
@@ -43,23 +43,31 @@ Point data in. Smooth interpolated raster out.
 
     ---
 
-    Pull real weather, air quality, and precipitation data from **Meteostat**, **OpenAQ**, and **Open-Meteo** — no API keys needed.
+    Pull real weather and air quality data from **Meteostat**, **OpenAQ**, **Open-Meteo**, and **NASA POWER** — no API keys needed. **ERA5** reanalysis via CDS API.
 
     [:octicons-arrow-right-24: Data sources](api/sources.md)
 
--   :material-satellite-variant:{ .lg .middle } **Satellite validation**
+-   :material-chart-bell-curve:{ .lg .middle } **Uncertainty quantification**
 
     ---
 
-    Compare your interpolated surface against **MODIS**, **CHIRPS**, and **Sentinel-5P** reference products via Google Earth Engine.
+    Kriging variance surfaces, GP posterior std, RF bootstrap intervals, and conformal prediction (MAPIE) — every method can now express *how sure* it is.
 
-    [:octicons-arrow-right-24: GEE validation](api/validation.md)
+    [:octicons-arrow-right-24: Uncertainty guide](interpolators.md#uncertainty)
 
--   :material-chart-line:{ .lg .middle } **Built-in cross-validation**
+-   :material-map:{ .lg .middle } **Interactive maps**
 
     ---
 
-    Blocked spatial k-fold CV runs automatically. RMSE, MAE, bias, and r printed for every method after every run.
+    `result.plot_interactive()` renders a zoomable map with plotly or leafmap — no static PNG, no extra code.
+
+    [:octicons-arrow-right-24: Visualization guide](examples.md)
+
+-   :material-chart-line:{ .lg .middle } **Auto-ranked cross-validation**
+
+    ---
+
+    Spatial k-fold or leave-one-out CV runs automatically. `result.best_method()` and `result.rank_methods()` tell you which algorithm won.
 
     [:octicons-arrow-right-24: Pipeline reference](pipeline.md)
 
@@ -70,6 +78,14 @@ Point data in. Smooth interpolated raster out.
     Save to **GeoTIFF**, **NetCDF**, or **PNG**. Every output carries CRS metadata and is ready for QGIS, ArcGIS, or further analysis.
 
     [:octicons-arrow-right-24: Examples](examples.md)
+
+-   :material-speedometer:{ .lg .middle } **50–200× faster IDW**
+
+    ---
+
+    KD-tree vectorized IDW replaces the old per-point loop — identical results, dramatically less waiting on large grids.
+
+    [:octicons-arrow-right-24: What's new in v0.2](interpolators.md)
 
 </div>
 
@@ -86,24 +102,60 @@ Point data in. Smooth interpolated raster out.
         data="stations.csv",
         boundary="Calgary, Alberta, Canada",
         method=["idw", "kriging", "spline"],
+        resolution="5km",   # ← km strings now supported
     ).run()
 
-    result.plot()           # side-by-side comparison
-    result.metrics_table()  # RMSE / MAE / r for each method
-    result.save("outputs/") # GeoTIFF + PNG + metrics CSV
+    result.plot()               # side-by-side matplotlib comparison
+    result.plot_interactive()   # zoomable plotly map
+    result.best_method()        # → "kriging"
+    result.rank_methods()       # ranked DataFrame
+    result.save("outputs/")     # GeoTIFF + PNG + metrics CSV
     ```
 
-=== "Live API"
+=== "Uncertainty"
 
     ```python
-    result = Pipeline(
-        data="meteostat",
-        variable="temperature",
-        date="2024-07-15",
-        boundary="Bavaria, Germany",
-        method=["kriging", "gp"],
-        validate_with_gee=True,
-    ).run()
+    from geointerpo.interpolators import KrigingInterpolator, MLInterpolator
+
+    # Kriging: mean + variance surface
+    model = KrigingInterpolator().fit(gdf)
+    mean_da, var_da = model.predict_with_variance(bbox, resolution=0.1)
+
+    # RF: bootstrap prediction interval
+    model = MLInterpolator(method="rf").fit(gdf)
+    mean, lower, upper = model.predict_with_uncertainty(bbox, alpha=0.1)
+    ```
+
+=== "Cokriging / SGS"
+
+    ```python
+    # Cokriging with elevation as secondary variable
+    from geointerpo.interpolators import CokrigingInterpolator
+
+    model = CokrigingInterpolator(
+        secondary_col="elevation",
+        secondary_fn=dem_lookup_fn,   # callable(xs_utm, ys_utm) → elevations
+    ).fit(gdf_with_elevation)
+    grid = model.predict(bbox, resolution=0.1)
+
+    # Sequential Gaussian Simulation — stochastic realizations
+    from geointerpo.interpolators import SGSInterpolator
+
+    model = SGSInterpolator(n_realizations=100).fit(gdf)
+    mean_da, std_da = model.predict_with_std(bbox)
+    all_realizations = model.realize(bbox)  # (100, n_lat, n_lon) DataArray
+    ```
+
+=== "Spatial CV"
+
+    ```python
+    from geointerpo.validation.metrics import spatial_cv
+    from geointerpo.interpolators import IDWInterpolator
+
+    model = IDWInterpolator(power=2)
+    # LOO with 50 km buffer — removes autocorrelation leakage
+    result = spatial_cv(model, gdf, strategy="loo", buffer_km=50)
+    print(result["rmse"], result["r"])
     ```
 
 === "Offline demo"
@@ -114,7 +166,7 @@ Point data in. Smooth interpolated raster out.
         variable="temperature",
         boundary=(-114.5, 50.8, -113.8, 51.3),
         method=["idw", "kriging"],
-        resolution=0.05,
+        resolution="2km",
     ).run()
     ```
 
@@ -146,7 +198,7 @@ All outputs below use the same 60 weather stations over Alberta, Canada.
 ### Geostatistical
 
 <div class="method-row" markdown>
-  <figure><img src="assets/methods/kriging.png" width="230" alt="Kriging"/><figcaption>Ordinary Kriging</figcaption></figure>
+  <figure><img src="assets/methods/kriging.png" width="230" alt="Kriging"/><figcaption>Ordinary Kriging + variance</figcaption></figure>
   <figure><img src="assets/methods/uk.png" width="230" alt="Universal Kriging"/><figcaption>Universal Kriging</figcaption></figure>
   <figure><img src="assets/methods/natural_neighbor.png" width="230" alt="Natural Neighbor"/><figcaption>Natural Neighbor</figcaption></figure>
 </div>
@@ -154,12 +206,12 @@ All outputs below use the same 60 weather stations over Alberta, Canada.
 ### Machine Learning
 
 <div class="method-row" markdown>
-  <figure><img src="assets/methods/gp.png" width="230" alt="GP"/><figcaption>Gaussian Process</figcaption></figure>
-  <figure><img src="assets/methods/rf.png" width="230" alt="RF"/><figcaption>Random Forest</figcaption></figure>
+  <figure><img src="assets/methods/gp.png" width="230" alt="GP"/><figcaption>Gaussian Process + σ</figcaption></figure>
+  <figure><img src="assets/methods/rf.png" width="230" alt="RF"/><figcaption>Random Forest + intervals</figcaption></figure>
   <figure><img src="assets/methods/rk.png" width="230" alt="RK"/><figcaption>Regression Kriging</figcaption></figure>
 </div>
 
-[:octicons-arrow-right-24: Full method reference with all 15 algorithms](interpolators.md)
+[:octicons-arrow-right-24: Full method reference with all 17 algorithms](interpolators.md)
 
 ---
 
@@ -175,10 +227,15 @@ All outputs below use the same 60 weather stations over Alberta, Canada.
     pip install geointerpo
     ```
 
+=== "Advanced geostatistics (cokriging + SGS)"
+    ```bash
+    pip install "geointerpo[full,geostat]"
+    ```
+
 === "From source"
     ```bash
     git clone https://github.com/homayounrezaie/geointerpo
-    cd geointerpo && pip install -e ".[full]"
+    cd geointerpo && pip install -e ".[full,geostat]"
     ```
 
 [:octicons-arrow-right-24: Full install guide with all extras](install.md)

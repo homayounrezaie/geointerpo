@@ -39,6 +39,7 @@ class RegressionKrigingInterpolator(BaseInterpolator):
     """
 
     _needs_metric = True
+    _supports_local_search = False
 
     def __init__(
         self,
@@ -88,6 +89,8 @@ class RegressionKrigingInterpolator(BaseInterpolator):
         """Override to reproject grid coordinates before prediction."""
         if not self._fitted:
             raise RuntimeError("Call fit() before predict()")
+        if self.search_radius is not None:
+            return super().predict(bbox, resolution=resolution)
 
         from pyproj import Transformer
 

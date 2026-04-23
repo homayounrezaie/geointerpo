@@ -99,7 +99,7 @@ Pipeline(
 | `validate_with_gee` | bool | `False` | Compare output against a GEE reference raster |
 | `cv_folds` | int | `5` | Number of spatial cross-validation folds |
 | `boundary_provider` | str | `"nominatim"` | `"nominatim"` (default) or `"osmnx"` |
-| `search_radius` | SearchRadius | `None` | Restrict the stations used per prediction |
+| `search_radius` | SearchRadius | `None` | Restrict the local station neighbourhood used per prediction |
 
 ---
 
@@ -149,3 +149,22 @@ Pipeline(..., search_radius=SearchRadius.fixed(distance_m=100_000))
 
 !!! note
     `SearchRadius.variable(n=12)` is the ArcGIS default.
+
+!!! info
+    `variable` selects the nearest `n` stations separately for each grid cell.
+    `fixed` uses all stations within `distance_m` metres of each grid cell.
+
+!!! warning
+    Fixed-radius search can leave `NaN` gaps if no stations fall inside the radius,
+    or if too few local stations are available for the chosen interpolator.
+
+!!! note
+    Search-radius neighbourhoods are applied by the deterministic interpolators
+    (`idw`, `kriging`, `natural_neighbor`, `nearest`, `linear`, `cubic`,
+    `rbf`, `spline`, `spline_tension`, `trend`).
+    ML-based methods (`gp`, `rf`, `gbm`, `rk`) remain global and ignore
+    `search_radius`.
+
+!!! tip
+    Local search can be noticeably slower for methods that need to refit a
+    local model per grid cell, especially kriging and spline-style methods.

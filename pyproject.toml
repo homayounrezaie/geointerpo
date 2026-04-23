@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "geointerpo"
-version = "0.1.4"
+version = "0.2.0"
 description = "Spatial interpolation toolkit — boundaries, point data, 15 methods, export, validation"
 readme = "README.md"
 license = { text = "MIT" }
@@ -60,6 +60,10 @@ data = [
 viz = [
     "matplotlib>=3.7",
 ]
+# Interactive visualization (plotly or leafmap)
+interactive = [
+    "plotly>=5.0",
+]
 # Location geocoding (named-location backward-compat, Nominatim uses requests)
 geo = [
     "geopy>=2.4",
@@ -68,7 +72,19 @@ geo = [
 dem = [
     "srtm.py>=0.3.5",
 ]
-# Recommended install — everything a data scientist needs except GEE
+# Advanced geostatistics — cokriging + sequential Gaussian simulation
+geostat = [
+    "gstools>=1.4",
+]
+# Uncertainty quantification for ML interpolators
+uncertainty = [
+    "mapie>=0.6",
+]
+# ERA5 reanalysis data — requires CDS account + ~/.cdsapirc setup
+era5 = [
+    "cdsapi>=0.7",
+]
+# Recommended install — everything a data scientist needs
 full = [
     "pykrige>=1.7",
     "scikit-learn>=1.3",
@@ -81,12 +97,16 @@ full = [
     "openaq>=0.7",
     "tqdm>=4.65",
     "matplotlib>=3.7",
+    "plotly>=5.0",
     "geopy>=2.4",
     "srtm.py>=0.3.5",
+    "gstools>=1.4",
+    "mapie>=0.6",
 ]
 # Interactive notebooks — heavy optional tools kept out of the core library
 notebooks = [
     "matplotlib>=3.7",
+    "plotly>=5.0",
     "leafmap>=0.30",
     "geemap>=0.30",
     "jupyter",
@@ -106,8 +126,11 @@ dev = [
     "openaq>=0.7",
     "tqdm>=4.65",
     "matplotlib>=3.7",
+    "plotly>=5.0",
     "geopy>=2.4",
     "srtm.py>=0.3.5",
+    "gstools>=1.4",
+    "mapie>=0.6",
     "leafmap>=0.30",
     "jupyter",
     "ipykernel",

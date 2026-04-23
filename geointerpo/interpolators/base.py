@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Tuple, Optional
 import copy
+import warnings
 
 import numpy as np
 import xarray as xr
@@ -46,11 +47,16 @@ class BaseInterpolator(ABC):
 
     # Subclasses set this to True if they need metric coordinates.
     _needs_metric: bool = False
+    _supports_local_search: bool = True
 
-    def __init__(self, value_col: str = "value"):
+    def __init__(self, value_col: str = "value", search_radius=None):
         self.value_col = value_col
+        self.search_radius = search_radius
         self._fitted = False
         self._proj_crs: Optional[CRS] = None
+        self._search_crs: Optional[CRS] = None
+        self._search_tree = None
+        self._search_radius_warned = False
 
     # ------------------------------------------------------------------
     # Public API
@@ -72,10 +78,13 @@ class BaseInterpolator(ABC):
         else:
             xs, ys = lons, lats
 
+        self._fit_xs = np.asarray(xs)
+        self._fit_ys = np.asarray(ys)
         self._lons = lons
         self._lats = lats
         self._values = values
         self._fit(xs, ys, values)
+        self._prepare_local_search(lons, lats)
         self._fitted = True
         return self
 
@@ -94,7 +103,7 @@ class BaseInterpolator(ABC):
         else:
             xs, ys = lon_grid.ravel(), lat_grid.ravel()
 
-        values = self._predict(xs, ys)
+        values = self._predict_points(xs, ys, lon_grid.ravel(), lat_grid.ravel())
         grid = values.reshape(lat_grid.shape)
         return xr.DataArray(
             grid,
@@ -129,19 +138,17 @@ class BaseInterpolator(ABC):
             if len(train_idx) < 2:
                 continue
             clone = copy.deepcopy(self)
-            if clone._needs_metric and self._proj_crs is not None:
-                clone._proj_crs = self._proj_crs
-            xs_train, ys_train = (
-                self._project(lons[train_idx], lats[train_idx])
-                if self._needs_metric else (lons[train_idx], lats[train_idx])
+            clone.fit(gdf.iloc[train_idx].copy())
+            if clone._needs_metric and clone._proj_crs is not None:
+                xs_test, ys_test = clone._project(lons[fold_test_idx], lats[fold_test_idx])
+            else:
+                xs_test, ys_test = lons[fold_test_idx], lats[fold_test_idx]
+            preds[fold_test_idx] = clone._predict_points(
+                xs_test,
+                ys_test,
+                lons[fold_test_idx],
+                lats[fold_test_idx],
             )
-            clone._fit(xs_train, ys_train, values[train_idx])
-            clone._fitted = True
-            xs_test, ys_test = (
-                self._project(lons[fold_test_idx], lats[fold_test_idx])
-                if self._needs_metric else (lons[fold_test_idx], lats[fold_test_idx])
-            )
-            preds[fold_test_idx] = clone._predict(xs_test, ys_test)
 
         mask = ~np.isnan(preds)
         return compute_metrics(values[mask], preds[mask])
@@ -155,6 +162,99 @@ class BaseInterpolator(ABC):
         from pyproj import Transformer
         t = Transformer.from_crs("EPSG:4326", self._proj_crs, always_xy=True)
         return t.transform(lons, lats)
+
+    def _prepare_local_search(self, lons: np.ndarray, lats: np.ndarray) -> None:
+        """Build a metric KD-tree for query-time neighbourhood selection."""
+        self._search_tree = None
+        if self.search_radius is None:
+            return
+        if not self._supports_local_search:
+            if not self._search_radius_warned:
+                warnings.warn(
+                    f"{type(self).__name__} ignores search_radius and will use all stations.",
+                    stacklevel=2,
+                )
+                self._search_radius_warned = True
+            return
+
+        from scipy.spatial import cKDTree
+
+        self._search_crs = self._proj_crs or _utm_crs_for_bbox(
+            float(lons.min()), float(lats.min()), float(lons.max()), float(lats.max())
+        )
+        self._search_xs, self._search_ys = self._search_project(lons, lats)
+        pts = np.column_stack([self._search_xs, self._search_ys])
+        self._search_tree = cKDTree(pts)
+
+    def _search_project(self, lons: np.ndarray, lats: np.ndarray):
+        """Project lon/lat coordinates into the metric search CRS."""
+        from pyproj import Transformer
+
+        t = Transformer.from_crs("EPSG:4326", self._search_crs, always_xy=True)
+        return t.transform(lons, lats)
+
+    def _predict_points(
+        self,
+        xs: np.ndarray,
+        ys: np.ndarray,
+        lons: np.ndarray,
+        lats: np.ndarray,
+    ) -> np.ndarray:
+        """Predict at a list of already-prepared query coordinates."""
+        if self.search_radius is None or self._search_tree is None:
+            return self._predict(xs, ys)
+        return self._predict_with_local_search(xs, ys, lons, lats)
+
+    def _predict_with_local_search(
+        self,
+        xs: np.ndarray,
+        ys: np.ndarray,
+        lons: np.ndarray,
+        lats: np.ndarray,
+    ) -> np.ndarray:
+        """Refit a local model per query point using the requested neighbourhood."""
+        qx, qy = self._search_project(np.asarray(lons), np.asarray(lats))
+        local_model = copy.deepcopy(self)
+        local_model.search_radius = None
+        local_model._search_tree = None
+        results = np.full(len(xs), np.nan, dtype=float)
+
+        for i, (xq, yq) in enumerate(zip(qx, qy)):
+            idx = self._local_neighbor_indices(xq, yq)
+            if idx.size == 0:
+                continue
+            try:
+                local_model._fit(
+                    self._fit_xs[idx],
+                    self._fit_ys[idx],
+                    self._values[idx],
+                )
+                pred = local_model._predict(np.asarray([xs[i]]), np.asarray([ys[i]]))
+                results[i] = float(np.asarray(pred).reshape(-1)[0])
+            except Exception:
+                continue
+        return results
+
+    def _local_neighbor_indices(self, xq: float, yq: float) -> np.ndarray:
+        """Return neighbour indices for one query point in search CRS units."""
+        sr = self.search_radius
+        if sr is None or self._search_tree is None:
+            return np.arange(len(self._values))
+
+        if sr.type == "variable":
+            k = max(1, min(int(sr.n), len(self._values)))
+            dist, idx = self._search_tree.query([xq, yq], k=k)
+            dist = np.atleast_1d(dist)
+            idx = np.atleast_1d(idx)
+            return idx[np.isfinite(dist)].astype(int, copy=False)
+
+        if sr.type == "fixed":
+            if sr.distance_m is None or sr.distance_m <= 0:
+                return np.array([], dtype=int)
+            idx = self._search_tree.query_ball_point([xq, yq], r=float(sr.distance_m))
+            return np.asarray(idx, dtype=int)
+
+        raise ValueError("search_radius.type must be 'variable' or 'fixed'")
 
     # ------------------------------------------------------------------
     # Subclass interface

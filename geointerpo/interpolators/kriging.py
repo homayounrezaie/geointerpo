@@ -17,10 +17,12 @@ class KrigingInterpolator(BaseInterpolator):
 
     Automatically reprojects to UTM so the variogram range is in metres.
 
-    mode: 'ordinary' or 'universal'
-    variogram_model: 'linear', 'power', 'gaussian', 'spherical', 'exponential', 'hole-effect'
-    nlags: number of variogram lags
-    weight: weight variogram by pair count
+    mode:                'ordinary' or 'universal'
+    variogram_model:     'linear', 'power', 'gaussian', 'spherical', 'exponential', 'hole-effect'
+    nlags:               number of variogram lags
+    weight:              weight variogram by pair count
+    anisotropy_scaling:  ratio of minor to major axis (1.0 = isotropic)
+    anisotropy_angle:    angle of major axis in degrees (0 = North, clockwise)
     """
 
     _needs_metric = True
@@ -31,6 +33,8 @@ class KrigingInterpolator(BaseInterpolator):
         variogram_model: str = "spherical",
         nlags: int = 6,
         weight: bool = False,
+        anisotropy_scaling: float = 1.0,
+        anisotropy_angle: float = 0.0,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -38,6 +42,8 @@ class KrigingInterpolator(BaseInterpolator):
         self.variogram_model = variogram_model
         self.nlags = nlags
         self.weight = weight
+        self.anisotropy_scaling = anisotropy_scaling
+        self.anisotropy_angle = anisotropy_angle
         self._model = None
 
     def _fit(self, xs, ys, values):
@@ -49,6 +55,8 @@ class KrigingInterpolator(BaseInterpolator):
             variogram_model=self.variogram_model,
             nlags=self.nlags,
             weight=self.weight,
+            anisotropy_scaling=self.anisotropy_scaling,
+            anisotropy_angle=self.anisotropy_angle,
             verbose=False,
             enable_plotting=False,
         )
@@ -58,30 +66,55 @@ class KrigingInterpolator(BaseInterpolator):
         return np.asarray(z)
 
     def predict(self, bbox, resolution: float = 0.1) -> xr.DataArray:
-        """Use pykrige's faster native grid execution."""
+        """Use pykrige's native grid execution for speed."""
         if not self._fitted:
             raise RuntimeError("Call fit() before predict()")
+        if self.search_radius is not None:
+            return super().predict(bbox, resolution=resolution)
 
+        mean_da, _ = self._predict_grid(bbox, resolution)
+        return mean_da
+
+    def predict_with_variance(self, bbox, resolution: float = 0.1) -> tuple[xr.DataArray, xr.DataArray]:
+        """Return (mean, variance) DataArrays — both in WGS-84.
+
+        The variance surface shows where the kriging estimate is most uncertain
+        (typically highest at locations far from any station).
+        """
+        if not self._fitted:
+            raise RuntimeError("Call fit() before predict_with_variance()")
+        return self._predict_grid(bbox, resolution)
+
+    def _predict_grid(self, bbox, resolution: float) -> tuple[xr.DataArray, xr.DataArray]:
         from pyproj import Transformer
 
         min_lon, min_lat, max_lon, max_lat = bbox
         lons = np.arange(min_lon, max_lon + resolution, resolution)
         lats = np.arange(min_lat, max_lat + resolution, resolution)
 
-        # Build a metric grid, then pass xs/ys axes to pykrige grid execute
         lon_grid, lat_grid = np.meshgrid(lons, lats)
         t = Transformer.from_crs("EPSG:4326", self._proj_crs, always_xy=True)
         xs_flat, ys_flat = t.transform(lon_grid.ravel(), lat_grid.ravel())
 
         z, variance = self._model.execute("points", xs_flat, ys_flat)
-        da = xr.DataArray(
-            np.asarray(z).reshape(lat_grid.shape),
+        shape = lat_grid.shape
+        coords = {"lat": lats, "lon": lons}
+
+        mean_da = xr.DataArray(
+            np.asarray(z).reshape(shape),
             dims=["lat", "lon"],
-            coords={"lat": lats, "lon": lons},
+            coords=coords,
             name=self.value_col,
-            attrs={"crs": "EPSG:4326", "variance": np.asarray(variance).reshape(lat_grid.shape)},
+            attrs={"crs": "EPSG:4326", "variance": np.asarray(variance).reshape(shape)},
         )
-        return da
+        var_da = xr.DataArray(
+            np.asarray(variance).reshape(shape),
+            dims=["lat", "lon"],
+            coords=coords,
+            name=f"{self.value_col}_variance",
+            attrs={"crs": "EPSG:4326"},
+        )
+        return mean_da, var_da
 
     @property
     def variogram_parameters(self) -> dict:

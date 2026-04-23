@@ -10,6 +10,8 @@ _MAP = {
     "SplineInterpolator":           "geointerpo.interpolators.spline",
     "TrendInterpolator":            "geointerpo.interpolators.trend",
     "RegressionKrigingInterpolator": "geointerpo.interpolators.regression_kriging",
+    "CokrigingInterpolator":        "geointerpo.interpolators.cokriging",
+    "SGSInterpolator":              "geointerpo.interpolators.sgs",
 }
 
 

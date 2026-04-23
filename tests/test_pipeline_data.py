@@ -14,6 +14,8 @@ import pandas as pd
 import pytest
 from shapely.geometry import Point, box, mapping
 
+from geointerpo import SearchRadius
+
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -189,6 +191,27 @@ class TestBoundaryInputs:
         ).run()
         assert result.grid is not None
         assert result.boundary is None
+
+    def test_search_radius_variable_is_local_per_prediction(self):
+        from geointerpo import Pipeline
+
+        gdf = gpd.GeoDataFrame(
+            {"value": [0.0, 10.0, 20.0]},
+            geometry=[Point(0.0, 0.0), Point(0.1, 0.0), Point(0.2, 0.0)],
+            crs="EPSG:4326",
+        )
+        result = Pipeline(
+            data=gdf,
+            boundary=(0.09, 0.0, 0.19, 0.0),
+            method="idw",
+            resolution=0.1,
+            padding_deg=0.0,
+            clip_to_boundary=False,
+            cv_folds=3,
+            search_radius=SearchRadius.variable(n=1),
+        ).run()
+
+        np.testing.assert_allclose(result.grid.values[0, :2], [10.0, 20.0], atol=1e-6)
 
 
 # ---------------------------------------------------------------------------

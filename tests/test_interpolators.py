@@ -6,6 +6,7 @@ import geopandas as gpd
 from shapely.geometry import Point
 
 from geointerpo.data.samples import load_temperature, load_precipitation, load_air_quality
+from geointerpo import SearchRadius
 from geointerpo.interpolators.idw import IDWInterpolator
 from geointerpo.interpolators.rbf import RBFInterpolator
 from geointerpo.interpolators.griddata import GridDataInterpolator
@@ -144,6 +145,17 @@ def test_idw_exact_at_stations(gdf):
     xs, ys = t.transform(gdf.geometry.x.values[:5], gdf.geometry.y.values[:5])
     preds = model._predict(xs, ys)
     np.testing.assert_allclose(preds, gdf["value"].values[:5], rtol=1e-5)
+
+
+def test_idw_fixed_search_radius_can_leave_gaps():
+    gdf = gpd.GeoDataFrame(
+        {"value": [0.0, 20.0]},
+        geometry=[Point(0.0, 0.0), Point(1.0, 0.0)],
+        crs="EPSG:4326",
+    )
+    model = IDWInterpolator(search_radius=SearchRadius.fixed(distance_m=10_000)).fit(gdf)
+    grid = model.predict((0.5, 0.0, 0.5, 0.0), resolution=1.0)
+    assert np.isnan(grid.values[0, 0])
 
 
 # ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 # Methods
 
-**15 algorithms · 24 method keys.**  
+**17 algorithms · 26 method keys.**  
 Every method shares `.fit(gdf)` → `.predict(bbox, resolution)` → `xr.DataArray`.  
 Swap `method=` to compare — everything else stays the same.
 
@@ -19,13 +19,14 @@ Fast and assumption-free. Good as a baseline or when data is dense and evenly di
 
 | Key | Description | Key params |
 |---|---|---|
-| `idw` | Inverse Distance Weighting | `power` (default 2) |
+| `idw` | Inverse Distance Weighting — **KD-tree vectorized** (v0.2, 50–200× faster) | `power`, `n_neighbors` |
 | `nearest` | Nearest-neighbour via scipy griddata | — |
 | `linear` | Delaunay triangulation, linear barycentric | — |
 | `cubic` | Clough-Tocher C¹ cubic | — |
 
 !!! tip
     Higher `power` in IDW makes the surface more local — distant stations contribute less.
+    Use `n_neighbors=10` to restrict each prediction to the 10 nearest stations.
 
 ---
 
@@ -63,9 +64,11 @@ Account for spatial autocorrelation via a variogram model. Produce statistically
 
 | Key | Aliases | Description | Key params |
 |---|---|---|---|
-| `kriging` | `ok`, `ordinary_kriging` | Ordinary Kriging | `variogram_model`, `nlags` |
+| `kriging` | `ok`, `ordinary_kriging` | Ordinary Kriging — returns **variance surface** | `variogram_model`, `nlags`, `anisotropy_scaling`, `anisotropy_angle` |
 | `uk` | `universal_kriging` | Universal Kriging — detrended residuals | `variogram_model` |
 | `natural_neighbor` | `nn` | Voronoi/Sibson area-stealing weights | — |
+| `cokriging` | `ked` | **Kriging with External Drift** — uses a secondary correlated variable | `secondary_col`, `secondary_fn`, `variogram_model` |
+| `sgs` | `simulation` | **Sequential Gaussian Simulation** — stochastic realizations | `n_realizations`, `variogram_model` |
 
 **Variogram models:** `linear` · `power` · `gaussian` · `spherical` · `exponential` · `hole-effect`
 
@@ -73,6 +76,38 @@ Account for spatial autocorrelation via a variogram model. Produce statistically
     ```bash
     pip install "geointerpo[kriging]"
     ```
+
+!!! note "Cokriging and SGS require gstools"
+    ```bash
+    pip install "geointerpo[geostat]"
+    # or: pip install gstools
+    ```
+
+### Kriging variance surface (new in v0.2)
+
+```python
+from geointerpo.interpolators import KrigingInterpolator
+
+model = KrigingInterpolator(
+    variogram_model="spherical",
+    anisotropy_scaling=0.5,  # 2:1 anisotropy ratio
+    anisotropy_angle=45.0,   # major axis direction (degrees, clockwise from North)
+).fit(gdf)
+
+mean_da, var_da = model.predict_with_variance(bbox, resolution=0.1)
+# mean_da: best estimate
+# var_da:  prediction variance (highest where far from stations)
+```
+
+### Sequential Gaussian Simulation
+
+```python
+from geointerpo.interpolators import SGSInterpolator
+
+model = SGSInterpolator(n_realizations=100).fit(gdf)
+mean_da, std_da = model.predict_with_std(bbox)   # ensemble statistics
+realizations = model.realize(bbox)               # (100, lat, lon) DataArray
+```
 
 ---
 
@@ -90,14 +125,52 @@ Capture non-linear spatial patterns without variogram assumptions. GP also retur
 | Key | Aliases | Description | Key params |
 |---|---|---|---|
 | `gp` | `gaussian_process` | Gaussian Process — mean + σ output | `length_scale`, `alpha` |
-| `rf` | `random_forest` | Random Forest regressor | `n_estimators`, `max_depth` |
-| `gbm` | `gradient_boosting` | Gradient Boosting regressor | `n_estimators`, `learning_rate` |
+| `rf` | `random_forest` | Random Forest — **bootstrap uncertainty** | `n_estimators`, `max_depth` |
+| `gbm` | `gradient_boosting` | Gradient Boosting — MAPIE conformal UQ | `n_estimators`, `learning_rate` |
 | `rk` | `regression_kriging` | ML trend + Kriging of residuals | `ml_method` |
 
+---
+
+## Uncertainty quantification {#uncertainty}
+
+Every major method now supports prediction uncertainty (new in v0.2):
+
 ```python
-# GP — also returns uncertainty grid
-from geointerpo.interpolators import MLInterpolator
-mean_da, std_da = MLInterpolator(method="gp").fit(gdf).predict_with_std(bbox)
+from geointerpo.interpolators import MLInterpolator, KrigingInterpolator
+
+# --- GP: native posterior standard deviation ---
+gp = MLInterpolator(method="gp").fit(gdf)
+mean, lower, upper = gp.predict_with_uncertainty(bbox, alpha=0.1)  # 90% interval
+
+# --- RF: bootstrap intervals from tree ensemble ---
+rf = MLInterpolator(method="rf").fit(gdf)
+mean, lower, upper = rf.predict_with_uncertainty(bbox, alpha=0.1)
+
+# --- Kriging: prediction variance surface ---
+kr = KrigingInterpolator().fit(gdf)
+mean_da, var_da = kr.predict_with_variance(bbox)
+```
+
+For GBM, install MAPIE for conformal prediction:
+```bash
+pip install "geointerpo[uncertainty]"
+# or: pip install mapie
+```
+
+---
+
+## Spatial cross-validation
+
+```python
+from geointerpo.validation.metrics import spatial_cv
+
+# Blocked k-fold (default — fast, good for most cases)
+result = spatial_cv(model, gdf, strategy="block", k=5)
+
+# LOO with 50 km buffer — removes autocorrelation leakage
+result = spatial_cv(model, gdf, strategy="loo", buffer_km=50)
+
+print(result["rmse"], result["r"], result["per_fold"])
 ```
 
 ---
@@ -108,9 +181,9 @@ mean_da, std_da = MLInterpolator(method="gp").fit(gdf).predict_with_std(bbox)
 from geointerpo.interpolators import KrigingInterpolator
 
 model = KrigingInterpolator(variogram_model="spherical")
-model.fit(gdf)                              # GeoDataFrame with Point geometry + 'value'
-grid  = model.predict(bbox, resolution=0.25)  # xr.DataArray (WGS-84)
-cv    = model.cross_validate(gdf, k=5)        # blocked spatial k-fold CV
+model.fit(gdf)                                   # GeoDataFrame with Point geometry + 'value'
+grid  = model.predict(bbox, resolution=0.25)     # xr.DataArray (WGS-84)
+cv    = model.cross_validate(gdf, k=5)           # blocked spatial k-fold CV
 ```
 
 → Full parameter reference in [API: Interpolators](api/interpolators.md)

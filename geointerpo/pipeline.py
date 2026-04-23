@@ -19,7 +19,8 @@ Quick start
         method="kriging",
     ).run()
 
-    result.plot()         # matplotlib comparison figure
+    result.plot()               # matplotlib comparison figure
+    result.plot_interactive()   # interactive plotly/leafmap map
     result.save("outputs/")
 """
 
@@ -49,6 +50,17 @@ class SearchRadius:
     n: int = 12
     distance_m: float | None = None
 
+    def __post_init__(self) -> None:
+        if self.type not in {"variable", "fixed"}:
+            raise ValueError("SearchRadius.type must be 'variable' or 'fixed'")
+        if self.type == "variable" and self.n < 1:
+            raise ValueError("SearchRadius.variable(n=...) requires n >= 1")
+        if self.type == "fixed":
+            if self.distance_m is None or self.distance_m <= 0:
+                raise ValueError(
+                    "SearchRadius.fixed(distance_m=...) requires a positive distance"
+                )
+
     @classmethod
     def variable(cls, n: int = 12) -> "SearchRadius":
         return cls(type="variable", n=n)
@@ -66,17 +78,19 @@ class SearchRadius:
 class InterpolationResult:
     """Holds every output from a Pipeline.run() call."""
 
-    grid: xr.DataArray                          # primary interpolated surface
-    stations: gpd.GeoDataFrame                  # input point data
-    dem: xr.DataArray | None = None             # elevation grid (if requested)
-    grids: dict[str, xr.DataArray] = field(default_factory=dict)  # all methods
-    cv_metrics: dict[str, dict] = field(default_factory=dict)      # per-method CV
-    boundary: gpd.GeoDataFrame | None = None    # study-area boundary
+    grid: xr.DataArray                               # primary interpolated surface
+    stations: gpd.GeoDataFrame                       # input point data
+    dem: xr.DataArray | None = None                  # elevation grid (if requested)
+    grids: dict[str, xr.DataArray] = field(default_factory=dict)           # all methods
+    variance_grids: dict[str, xr.DataArray] = field(default_factory=dict)  # kriging/SGS variance
+    cv_metrics: dict[str, dict] = field(default_factory=dict)              # per-method CV
+    boundary: gpd.GeoDataFrame | None = None         # study-area boundary
     method: str = "kriging"
     variable: str = "value"
     bbox: tuple = ()
 
     # ------------------------------------------------------------------
+
     def boundary_polygon(self):
         """Return the Shapely geometry of the study-area boundary, or None."""
         if self.boundary is not None:
@@ -103,10 +117,60 @@ class InterpolationResult:
         plt.show()
         return fig
 
+    def plot_interactive(self, backend: str = "auto", **kwargs):
+        """Interactive map using plotly (default) or leafmap.
+
+        Parameters
+        ----------
+        backend: 'plotly' | 'leafmap' | 'auto' (auto-detects installed backend)
+        """
+        from geointerpo.viz_interactive import plot_interactive
+        return plot_interactive(
+            self.grid,
+            stations=self.stations,
+            boundary=self.boundary,
+            backend=backend,
+            title=self.variable,
+            **kwargs,
+        )
+
     def metrics_table(self):
         """Return cross-validation metrics as a pandas DataFrame."""
         import pandas as pd
         return pd.DataFrame(self.cv_metrics).T.drop(columns=["n"], errors="ignore").round(3)
+
+    def best_method(self, by: str = "rmse") -> str:
+        """Return the name of the best-performing method based on CV metrics.
+
+        Parameters
+        ----------
+        by: metric to rank by — 'rmse' (default), 'mae', 'bias', or 'r'.
+            For 'r', higher is better; for all others, lower is better.
+        """
+        if not self.cv_metrics:
+            raise RuntimeError("No CV metrics available — run with cv_folds > 0.")
+        ascending = by != "r"
+        table = self.metrics_table()
+        if by not in table.columns:
+            raise ValueError(f"Metric '{by}' not found. Available: {list(table.columns)}")
+        return table.sort_values(by, ascending=ascending).index[0]
+
+    def rank_methods(self, by: str = "rmse"):
+        """Return a ranked DataFrame of methods by CV metric.
+
+        Parameters
+        ----------
+        by: metric to rank by — 'rmse' (default), 'mae', 'bias', or 'r'.
+        """
+        if not self.cv_metrics:
+            raise RuntimeError("No CV metrics available — run with cv_folds > 0.")
+        ascending = by != "r"
+        table = self.metrics_table()
+        if by not in table.columns:
+            raise ValueError(f"Metric '{by}' not found. Available: {list(table.columns)}")
+        ranked = table.sort_values(by, ascending=ascending).copy()
+        ranked.insert(0, "rank", range(1, len(ranked) + 1))
+        return ranked
 
     def save(self, output_dir: str | pathlib.Path = "outputs", geotiff: bool = True,
              netcdf: bool = False, plot: bool = True):
@@ -121,6 +185,15 @@ class InterpolationResult:
                 export_geotiff(da, out / f"{safe}.tif")
             if netcdf:
                 export_netcdf(da, out / f"{safe}.nc")
+
+        # Save variance grids if present
+        for name, da in self.variance_grids.items():
+            safe = name.replace(" ", "_").lower()
+            if geotiff:
+                try:
+                    export_geotiff(da, out / f"{safe}_variance.tif")
+                except Exception:
+                    pass
 
         self.metrics_table().to_csv(out / "cv_metrics.csv")
 
@@ -162,6 +235,11 @@ _METHOD_ALIASES: dict[str, str] = {
     "gradient_boosting":"MLInterpolator",
     "rk":               "RegressionKrigingInterpolator",
     "regression_kriging":"RegressionKrigingInterpolator",
+    # Geostatistical — new
+    "cokriging":        "CokrigingInterpolator",
+    "ked":              "CokrigingInterpolator",
+    "sgs":              "SGSInterpolator",
+    "simulation":       "SGSInterpolator",
 }
 
 _METHOD_DEFAULTS: dict[str, dict] = {
@@ -182,7 +260,12 @@ _METHOD_DEFAULTS: dict[str, dict] = {
 ALL_METHODS = sorted(_METHOD_ALIASES)
 
 
-def _build_model(method_key: str, extra_params: dict, covariates_fn=None):
+def _build_model(
+    method_key: str,
+    extra_params: dict,
+    covariates_fn=None,
+    search_radius: SearchRadius | None = None,
+):
     import importlib
 
     key = method_key.lower()
@@ -200,6 +283,8 @@ def _build_model(method_key: str, extra_params: dict, covariates_fn=None):
         "SplineInterpolator":           "geointerpo.interpolators.spline",
         "TrendInterpolator":            "geointerpo.interpolators.trend",
         "RegressionKrigingInterpolator":"geointerpo.interpolators.regression_kriging",
+        "CokrigingInterpolator":        "geointerpo.interpolators.cokriging",
+        "SGSInterpolator":              "geointerpo.interpolators.sgs",
     }
     cls = getattr(importlib.import_module(mod_map[cls_name]), cls_name)
     params = dict(_METHOD_DEFAULTS.get(key, {}))
@@ -217,10 +302,36 @@ def _build_model(method_key: str, extra_params: dict, covariates_fn=None):
         params.update(extra_params)
 
     # Inject covariates_fn for methods that support it
-    if covariates_fn is not None and cls_name in ("MLInterpolator", "RegressionKrigingInterpolator"):
+    if covariates_fn is not None and cls_name in (
+        "MLInterpolator", "RegressionKrigingInterpolator", "CokrigingInterpolator"
+    ):
         params["covariates_fn"] = covariates_fn
 
+    if search_radius is not None:
+        params.setdefault("search_radius", search_radius)
+
     return cls(**params)
+
+
+# ---------------------------------------------------------------------------
+# Resolution parsing helper
+# ---------------------------------------------------------------------------
+
+def _parse_resolution(resolution) -> float:
+    """Accept degrees (float) or a km string like '5km' or '500m'."""
+    if isinstance(resolution, (int, float)):
+        return float(resolution)
+    if isinstance(resolution, str):
+        s = resolution.strip().lower()
+        if s.endswith("km"):
+            km = float(s[:-2])
+            return km / 111.0  # 1° ≈ 111 km at equator
+        if s.endswith("m"):
+            m = float(s[:-1])
+            return m / 111_000.0
+        # Bare number string
+        return float(s)
+    raise TypeError(f"resolution must be a float or string like '5km', got {type(resolution)}")
 
 
 # ---------------------------------------------------------------------------
@@ -239,56 +350,26 @@ class Pipeline:
       - Geo file (.shp / .geojson / .gpkg / .zip)  → ``data="stations.shp"``
     * **GeoDataFrame** already in memory  → ``data=my_gdf``
     * **API source string** — fetches live station data:
-      ``"meteostat"`` · ``"openaq"`` · ``"openmeteo"`` · ``"sample"`` (offline)
+      ``"meteostat"`` · ``"openaq"`` · ``"openmeteo"`` · ``"era5"`` ·
+      ``"nasapower"`` · ``"sample"`` (offline)
       Combine with ``variable`` and ``date`` to select what is fetched.
 
     Step 2 — Boundary (``boundary``)
     ----------------------------------
     Define the study area.  All output grids are clipped to this boundary.
-    The bounding box for the interpolation grid is derived automatically.
-    Five options:
-
-    * **Place name** string  → ``boundary="Calgary, AB"``
-    * **File path**  → ``boundary="data/calgary.geojson"``
-    * **4-tuple bbox**  → ``boundary=(-114.5, 50.8, -113.8, 51.3)``
-    * **GeoDataFrame or Shapely geometry**  → passthrough
-    * ``None``  — no clipping; bbox is derived from the point data extent
 
     Step 3 — Methods (``method`` + ``method_params``)
     ---------------------------------------------------
     One method or a list for side-by-side comparison:
     ``"idw"`` · ``"kriging"`` · ``"spline"`` · ``"rbf"`` · ``"natural_neighbor"``
-    ``"trend"`` · ``"gp"`` · ``"rf"`` · ``"gbm"`` · ``"rk"`` · and more.
-
-    Per-method parameters via nested dict::
-
-        method_params={
-            "idw":     {"power": 3},
-            "kriging": {"variogram_model": "spherical"},
-        }
+    ``"trend"`` · ``"gp"`` · ``"rf"`` · ``"gbm"`` · ``"rk"`` ·
+    ``"cokriging"`` · ``"sgs"`` · and more.
 
     Other parameters
     -----------------
-    variable : str
-        Column / variable name to interpolate.
-        - For CSV/geo files: name of the value column (default ``"value"``).
-        - For API sources: variable to request (``"temperature"``, ``"pm25"`` …).
-    date : str
-        ISO date ``"YYYY-MM-DD"`` — used only when ``data`` is an API source.
-    lon_col, lat_col, value_col : str
-        Column names for CSV files (defaults ``"lon"``, ``"lat"``, ``"value"``).
-    resolution : float
-        Grid cell size in degrees (default ``0.25``).
-    padding_deg : float
-        Padding added around the boundary extent when building the grid (default ``0.5``).
-    clip_to_boundary : bool
-        Mask output grids to the boundary polygon (default ``True``).
-    include_dem : bool
-        Fetch SRTM elevation and use it as a covariate for ML/RK methods.
-    cv_folds : int
-        Spatial cross-validation folds (default ``5``).
-    boundary_provider : str
-        ``"nominatim"`` (default, free, no key) or ``"osmnx"``.
+    resolution : float or str
+        Grid cell size — float in degrees (default ``0.25``) **or** a string
+        like ``"5km"`` or ``"500m"`` for metric units.
     """
 
     def __init__(
@@ -303,7 +384,7 @@ class Pipeline:
         lat_col: str = "lat",
         value_col: str = "value",
         # --- grid options ---
-        resolution: float = 0.25,
+        resolution: float | str = 0.25,
         padding_deg: float = 0.5,
         # --- method options ---
         method_params: dict | None = None,
@@ -332,7 +413,7 @@ class Pipeline:
         self.lon_col = lon_col
         self.lat_col = lat_col
         self.value_col = value_col
-        self.resolution = resolution
+        self.resolution = _parse_resolution(resolution)
         self.padding_deg = padding_deg
         self.method_params = method_params or {}
         self.boundary_provider = boundary_provider
@@ -342,9 +423,8 @@ class Pipeline:
         self.cv_folds = cv_folds
         self.search_radius = search_radius
         self.openaq_api_key = openaq_api_key
-        # backward-compat: 'source' and 'location' still accepted
-        self._source = source  # explicit API source override
-        self._location = location  # explicit geocoded location (old API)
+        self._source = source
+        self._location = location
 
     # ------------------------------------------------------------------
     # Public entry point
@@ -353,16 +433,13 @@ class Pipeline:
     def run(self) -> InterpolationResult:
         """Execute the full pipeline and return an InterpolationResult."""
 
-        # Step 1: resolve boundary polygon (may be None)
         print("[1/5] Resolving boundary…")
         boundary_gdf = self._resolve_boundary()
 
-        # Step 2: load point data
         print(f"[2/5] Loading point data…")
         gdf = self._load_data(boundary_gdf)
         print(f"      {len(gdf)} points loaded")
 
-        # Step 3: determine grid bbox
         bbox = self._resolve_bbox(boundary_gdf, gdf)
         print(f"      bbox = {tuple(round(v, 4) for v in bbox)}")
 
@@ -378,24 +455,32 @@ class Pipeline:
             print("[3/5] Skipping DEM")
 
         print(f"[4/5] Interpolating with: {', '.join(self.methods)}")
-        grids, cv_metrics = self._interpolate(gdf, bbox, covariates_fn)
+        grids, variance_grids, cv_metrics = self._interpolate(gdf, bbox, covariates_fn)
 
-        # Clip outputs to boundary polygon (requires rioxarray)
         if boundary_gdf is not None and self.clip_to_boundary:
             grids = self._clip_grids(grids, boundary_gdf)
 
         primary = grids[self.methods[0]]
-        return InterpolationResult(
+        result = InterpolationResult(
             grid=primary,
             stations=gdf,
             dem=dem,
             grids=grids,
+            variance_grids=variance_grids,
             cv_metrics=cv_metrics,
             boundary=boundary_gdf,
             method=self.methods[0],
             variable=self.variable,
             bbox=bbox,
         )
+
+        if cv_metrics:
+            best = result.best_method()
+            print(f"\n[5/5] Best method by RMSE: {best}")
+            ranked = result.rank_methods()
+            print(ranked.to_string())
+
+        return result
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -412,20 +497,16 @@ class Pipeline:
         boundary_gdf: gpd.GeoDataFrame | None,
         gdf: gpd.GeoDataFrame,
     ) -> tuple:
-        """Derive grid bbox using priority: boundary > location > data extent."""
         p = self.padding_deg
 
-        # 1. Boundary takes priority — grid covers its extent
         if boundary_gdf is not None:
             from geointerpo.boundaries import boundary_bbox
             mn_lon, mn_lat, mx_lon, mx_lat = boundary_bbox(boundary_gdf)
             return (mn_lon - p, mn_lat - p, mx_lon + p, mx_lat + p)
 
-        # 2. Explicit location (backward-compat)
         if self._location is not None:
             return self._geocode_location(self._location)
 
-        # 3. Derive from the extent of the point data itself
         mn_lon = float(gdf.geometry.x.min())
         mn_lat = float(gdf.geometry.y.min())
         mx_lon = float(gdf.geometry.x.max())
@@ -433,7 +514,6 @@ class Pipeline:
         return (mn_lon - p, mn_lat - p, mx_lon + p, mx_lat + p)
 
     def _geocode_location(self, location) -> tuple:
-        """Geocode a place name or pass through a bbox tuple."""
         if isinstance(location, (list, tuple)) and len(location) == 4:
             return tuple(float(v) for v in location)
         try:
@@ -457,25 +537,21 @@ class Pipeline:
         return (lon - p, lat - p, lon + p, lat + p)
 
     _API_SOURCES = frozenset(
-        {"auto", "sample", "meteostat", "openaq", "openmeteo"}
+        {"auto", "sample", "meteostat", "openaq", "openmeteo", "era5", "nasapower"}
     )
 
     def _load_data(self, boundary_gdf: gpd.GeoDataFrame | None) -> gpd.GeoDataFrame:
-        """Load point data from file, GeoDataFrame, or API source."""
         import pathlib
 
         d = self.data
 
-        # --- GeoDataFrame passthrough ---
         if isinstance(d, gpd.GeoDataFrame):
             return _ensure_value_col(d, self.value_col)
 
-        # --- Known API source string (before file-path check) ---
         if isinstance(d, str) and d.lower() in self._API_SOURCES:
             src = d.lower()
         elif d is None and self._source is not None and self._source.lower() in self._API_SOURCES:
             src = self._source.lower()
-        # --- File path ---
         elif isinstance(d, (str, pathlib.Path)):
             p = pathlib.Path(d)
             if not p.exists():
@@ -492,11 +568,8 @@ class Pipeline:
         else:
             src = "auto"
 
-        # --- API source string ---
         src = (src or self._source or "auto").lower()
         var = self.variable.lower()
-
-        # Derive a bbox for fetching if we have boundary or location info
         fetch_bbox = self._api_fetch_bbox(boundary_gdf)
 
         if src == "auto":
@@ -539,14 +612,21 @@ class Pipeline:
             }.get(var, var)
             return OpenMeteoSource(variable=col, date=self.date).fetch(fetch_bbox)
 
+        if src == "era5":
+            from geointerpo.sources.era5 import ERA5Source
+            return ERA5Source(variable=var, date=self.date).fetch(fetch_bbox)
+
+        if src == "nasapower":
+            from geointerpo.sources.nasapower import NASAPowerSource
+            return NASAPowerSource(variable=var, date=self.date).fetch(fetch_bbox)
+
         raise ValueError(
             f"Unknown data source '{src}'. "
             "Use a file path, GeoDataFrame, or one of: "
-            "'meteostat', 'openaq', 'openmeteo', 'sample'."
+            "'meteostat', 'openaq', 'openmeteo', 'era5', 'nasapower', 'sample'."
         )
 
     def _api_fetch_bbox(self, boundary_gdf: gpd.GeoDataFrame | None) -> tuple:
-        """Best-effort bbox for API queries — from boundary, location, or world."""
         p = self.padding_deg
         if boundary_gdf is not None:
             from geointerpo.boundaries import boundary_bbox
@@ -554,7 +634,6 @@ class Pipeline:
             return (mn_lon - p, mn_lat - p, mx_lon + p, mx_lat + p)
         if self._location is not None:
             return self._geocode_location(self._location)
-        # No spatial constraint — callers must supply data= or boundary=
         return (-180.0, -90.0, 180.0, 90.0)
 
     def _clip_grids(
@@ -576,17 +655,12 @@ class Pipeline:
 
     def _interpolate(self, gdf, bbox, covariates_fn):
         grids: dict[str, xr.DataArray] = {}
+        variance_grids: dict[str, xr.DataArray] = {}
         cv: dict[str, dict] = {}
-
-        # Apply search radius by subsetting to n nearest if 'variable' type
-        if self.search_radius and self.search_radius.type == "variable":
-            gdf = _apply_variable_radius(gdf, self.search_radius.n)
 
         for method_key in self.methods:
             extra = {}
             if isinstance(self.method_params, dict) and self.method_params:
-                # Nested dict: keys are method names → {method: {param: val}}
-                # Flat dict: all keys are param names (no dict values) → apply to all methods
                 is_nested = any(isinstance(v, dict) for v in self.method_params.values())
                 if is_nested:
                     extra = self.method_params.get(method_key, {})
@@ -594,16 +668,32 @@ class Pipeline:
                     extra = self.method_params
 
             try:
-                model = _build_model(method_key, extra, covariates_fn)
+                model = _build_model(
+                    method_key,
+                    extra,
+                    covariates_fn=covariates_fn,
+                    search_radius=self.search_radius,
+                )
                 model.fit(gdf)
-                grids[method_key] = model.predict(bbox, resolution=self.resolution)
-                cv[method_key] = model.cross_validate(gdf, k=self.cv_folds)
-                m = cv[method_key]
-                print(f"      {method_key:25s}  RMSE={m['rmse']:.3f}  r={m['r']:.4f}")
+
+                # Collect variance surface where available (Kriging, SGS, Cokriging)
+                if hasattr(model, "predict_with_variance"):
+                    mean_da, var_da = model.predict_with_variance(bbox, resolution=self.resolution)
+                    grids[method_key] = mean_da
+                    variance_grids[method_key] = var_da
+                else:
+                    grids[method_key] = model.predict(bbox, resolution=self.resolution)
+
+                if self.cv_folds > 0:
+                    cv[method_key] = model.cross_validate(gdf, k=self.cv_folds)
+                    m = cv[method_key]
+                    print(f"      {method_key:25s}  RMSE={m['rmse']:.3f}  r={m['r']:.4f}")
+                else:
+                    print(f"      {method_key:25s}  (no CV)")
             except Exception as exc:
                 print(f"      {method_key:25s}  SKIPPED ({type(exc).__name__}: {exc})")
 
-        return grids, cv
+        return grids, variance_grids, cv
 
 
 # ---------------------------------------------------------------------------
@@ -621,7 +711,6 @@ def _load_csv(
 
     df = pd.read_csv(path)
 
-    # Flexible column detection: accept lon/lat aliases
     lon_candidates = [lon_col, "longitude", "x", "X", "Longitude", "LON"]
     lat_candidates = [lat_col, "latitude", "y", "Y", "Latitude", "LAT"]
     val_candidates = [value_col, "value", "val", "z", "Z"]
@@ -675,7 +764,6 @@ def _ensure_value_col(gdf: gpd.GeoDataFrame, value_col: str) -> gpd.GeoDataFrame
         return gdf
     if value_col in gdf.columns and value_col != "value":
         return gdf.rename(columns={value_col: "value"})
-    # Try common aliases
     for alias in ("val", "z", "Z", "data"):
         if alias in gdf.columns:
             return gdf.rename(columns={alias: "value"})
@@ -693,13 +781,3 @@ def _ensure_value_col(gdf: gpd.GeoDataFrame, value_col: str) -> gpd.GeoDataFrame
 def _yesterday() -> str:
     import pandas as pd
     return (pd.Timestamp.today() - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
-
-
-def _apply_variable_radius(gdf: gpd.GeoDataFrame, n: int) -> gpd.GeoDataFrame:
-    """Keep only n points closest to the centroid (variable search radius approx)."""
-    if len(gdf) <= n:
-        return gdf
-    cx = gdf.geometry.x.mean()
-    cy = gdf.geometry.y.mean()
-    dist = np.sqrt((gdf.geometry.x - cx) ** 2 + (gdf.geometry.y - cy) ** 2)
-    return gdf.loc[dist.nsmallest(n).index].reset_index(drop=True)

@@ -6,7 +6,7 @@
 pip install "geointerpo[full]"
 ```
 
-Adds kriging, ML methods, GeoTIFF export, all three data APIs, and matplotlib. Covers 95% of use cases.
+Adds kriging, ML methods, GeoTIFF export, all data APIs, matplotlib, plotly, and uncertainty tools. Covers 95% of use cases.
 
 ## Core only
 
@@ -14,7 +14,7 @@ Adds kriging, ML methods, GeoTIFF export, all three data APIs, and matplotlib. C
 pip install geointerpo
 ```
 
-Includes IDW, RBF, spline, griddata, boundary loading, and the Pipeline. No kriging, no ML, no APIs.
+Includes IDW (KD-tree fast), RBF, spline, griddata, boundary loading, and the Pipeline. No kriging, no ML, no APIs.
 
 ## Pick your extras
 
@@ -23,6 +23,18 @@ Includes IDW, RBF, spline, griddata, boundary loading, and the Pipeline. No krig
     pip install "geointerpo[kriging]"
     ```
     Unlocks `kriging`, `uk`, `gp`, `rf`, `gbm`, `rk` methods via **pykrige** + **scikit-learn**.
+
+=== "Advanced Geostatistics"
+    ```bash
+    pip install "geointerpo[geostat]"
+    ```
+    Unlocks **cokriging** (`ked`) and **Sequential Gaussian Simulation** (`sgs`) via **gstools**.
+
+=== "Uncertainty (ML)"
+    ```bash
+    pip install "geointerpo[uncertainty]"
+    ```
+    Conformal prediction intervals for GBM via **MAPIE**. RF bootstrap intervals need no extra install.
 
 === "Raster I/O"
     ```bash
@@ -34,14 +46,24 @@ Includes IDW, RBF, spline, griddata, boundary loading, and the Pipeline. No krig
     ```bash
     pip install "geointerpo[data]"
     ```
-    `data="meteostat"`, `data="openaq"`, `data="openmeteo"` — no API keys needed.
+    `data="meteostat"`, `data="openaq"`, `data="openmeteo"` — no API keys needed.  
+    `data="nasapower"` — NASA POWER REST API, no account required.
 
-=== "GEE Validation"
+=== "ERA5 Reanalysis"
     ```bash
-    pip install "geointerpo[gee]"
-    earthengine authenticate
+    pip install "geointerpo[era5]"
+    # Then set up your CDS API key:
+    # https://cds.climate.copernicus.eu/api-how-to
     ```
-    Compare against MODIS, CHIRPS, Sentinel-5P via **earthengine-api**.
+    80+ years of hourly global reanalysis at 0.25°. Free CDS account required.
+
+=== "Interactive Visualization"
+    ```bash
+    pip install "geointerpo[interactive]"
+    # or:
+    pip install plotly
+    ```
+    `result.plot_interactive()` — zoomable Plotly map in notebook or browser.
 
 === "Visualization"
     ```bash
@@ -53,7 +75,7 @@ Includes IDW, RBF, spline, griddata, boundary loading, and the Pipeline. No krig
     ```bash
     pip install "geointerpo[notebooks]"
     ```
-    Interactive maps in Jupyter via **leafmap** + **geemap**.
+    Interactive maps in Jupyter via **plotly** + **leafmap** + **geemap**.
 
 ---
 
@@ -62,15 +84,18 @@ Includes IDW, RBF, spline, griddata, boundary loading, and the Pipeline. No krig
 | Extra | Packages | Unlocks |
 |---|---|---|
 | `kriging` | pykrige, scikit-learn | Kriging, GP, RF, GBM, RK methods |
+| `geostat` | gstools | Cokriging (KED), Sequential Gaussian Simulation |
+| `uncertainty` | mapie | Conformal prediction intervals for GBM |
 | `raster` | rasterio, rioxarray | GeoTIFF export, boundary clipping |
 | `data` | meteostat, openaq, openmeteo-requests | Live weather & air quality APIs |
-| `gee` | earthengine-api | MODIS / CHIRPS / Sentinel validation |
+| `era5` | cdsapi | ERA5 reanalysis (needs free CDS account) |
+| `interactive` | plotly | Interactive zoomable maps |
 | `viz` | matplotlib | Static plots |
 | `dem` | srtm.py | SRTM elevation covariate |
 | `geo` | geopy | Named-location geocoding |
-| `notebooks` | leafmap, geemap, jupyter | Interactive maps |
-| `full` | all above except GEE & notebooks | Recommended for data science |
-| `dev` | full + GEE + notebooks + pytest | Contributors |
+| `notebooks` | plotly, leafmap, geemap, jupyter | Interactive maps in Jupyter |
+| `full` | all core extras | Recommended for data science |
+| `dev` | full + notebooks + pytest | Contributors |
 
 ---
 
@@ -79,25 +104,15 @@ Includes IDW, RBF, spline, griddata, boundary loading, and the Pipeline. No krig
 ```bash
 git clone https://github.com/homayounrezaie/geointerpo
 cd geointerpo
-pip install -e ".[full]"
+pip install -e ".[full,geostat]"
 ```
 
 !!! note
     Editable install — changes to the source take effect immediately without reinstalling.
 
-## GEE authentication
-
-!!! warning "One-time setup required"
-    GEE validation (`validate_with_gee=True`) requires a one-time browser auth:
-
-    ```bash
-    pip install "geointerpo[gee]"
-    earthengine authenticate
-    ```
-
 ## Verify
 
 ```bash
 python -c "import geointerpo; print(geointerpo.__version__)"
-python examples/quickstart.py
+# → 0.2.0
 ```
