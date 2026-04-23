@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "geointerpo"
 version = "0.2.0"
-description = "Spatial interpolation toolkit — boundaries, point data, 15 methods, export, validation"
+description = "Spatial interpolation toolkit — boundaries, point data, 18 methods, export, and validation"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.9"
@@ -33,7 +33,7 @@ dependencies = [
     "xarray>=2023.1",
     "pandas>=2.0,<2.3",
     "pyyaml>=6.0",
-    "requests>=2.31",    # used by boundaries (Nominatim) and GEE validator
+    "requests>=2.31",    # used by boundaries (Nominatim) and HTTP-based data sources
 ]
 
 [project.optional-dependencies]
@@ -137,6 +137,7 @@ dev = [
     "pytest>=7",
     "pytest-cov",
     "ruff",
+    "build",
 ]
 
 [project.scripts]

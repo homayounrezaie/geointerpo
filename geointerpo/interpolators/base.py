@@ -161,6 +161,11 @@ class BaseInterpolator(ABC):
         """Reproject WGS-84 lon/lat → local UTM metres."""
         from pyproj import Transformer
         t = Transformer.from_crs("EPSG:4326", self._proj_crs, always_xy=True)
+        lons = np.asarray(lons, dtype=float)
+        lats = np.asarray(lats, dtype=float)
+        if lons.size == 1:
+            x, y = t.transform(float(lons.reshape(-1)[0]), float(lats.reshape(-1)[0]))
+            return np.asarray([x]), np.asarray([y])
         return t.transform(lons, lats)
 
     def _prepare_local_search(self, lons: np.ndarray, lats: np.ndarray) -> None:
@@ -191,6 +196,11 @@ class BaseInterpolator(ABC):
         from pyproj import Transformer
 
         t = Transformer.from_crs("EPSG:4326", self._search_crs, always_xy=True)
+        lons = np.asarray(lons, dtype=float)
+        lats = np.asarray(lats, dtype=float)
+        if lons.size == 1:
+            x, y = t.transform(float(lons.reshape(-1)[0]), float(lats.reshape(-1)[0]))
+            return np.asarray([x]), np.asarray([y])
         return t.transform(lons, lats)
 
     def _predict_points(

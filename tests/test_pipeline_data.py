@@ -1,6 +1,6 @@
 """Tests for the 3-step Pipeline API: data, boundary, method.
 
-All tests are offline — no network, no GEE.
+All tests are offline — no network access required.
 """
 
 from __future__ import annotations

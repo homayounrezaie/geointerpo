@@ -14,7 +14,7 @@ Works on 1-D arrays; NaN values are automatically masked.
 ## grid_metrics
 
 ```python
-from geointerpo.validation.metrics import grid_metrics
+from geointerpo.validation import grid_metrics
 
 metrics = grid_metrics(reference_da, predicted_da)
 # includes 'diff_map': xr.DataArray of pixel-wise differences
@@ -22,22 +22,22 @@ metrics = grid_metrics(reference_da, predicted_da)
 
 Reprojects `predicted_da` onto `reference_da` grid via bilinear interpolation before comparison.
 
-## GEEValidator
+## spatial_cv
 
 ```python
-from geointerpo.validation import GEEValidator
+from geointerpo.validation import spatial_cv
+from geointerpo.interpolators import IDWInterpolator
 
-validator = GEEValidator(variable="temperature", date="2024-07-15")
-reference = validator.fetch_reference(bbox=(5, 44, 25, 56), resolution=0.25)
-metrics = validator.compare(interpolated_da, reference)
+model = IDWInterpolator(power=2)
+metrics = spatial_cv(model, gdf, strategy="block", k=5)
+# or:
+metrics = spatial_cv(model, gdf, strategy="loo", buffer_km=50)
 ```
 
-| `variable` | GEE Dataset | Band |
-|---|---|---|
-| `temperature` | `MODIS/061/MOD11A1` | `LST_Day_1km` (→ °C) |
-| `precipitation` | `UCSB-CHG/CHIRPS/DAILY` | `precipitation` |
-| `pm25` | `COPERNICUS/S5P/NRTI/L3_AER_AI` | `absorbing_aerosol_index` |
-| `o3` | `COPERNICUS/S5P/NRTI/L3_O3` | `O3_column_number_density` |
-| `no2` | `COPERNICUS/S5P/NRTI/L3_NO2` | `tropospheric_NO2_column_number_density` |
+| Parameter | Meaning |
+|---|---|
+| `strategy="block"` | Blocked spatial k-fold CV |
+| `strategy="loo"` | Leave-one-out CV |
+| `buffer_km` | Exclude nearby training points in LOO to reduce leakage |
 
-**Setup:** run `earthengine authenticate` once in your terminal.
+Returns the standard metric keys plus a `per_fold` list.

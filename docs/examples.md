@@ -78,15 +78,14 @@ result.save("outputs/")
 
 ---
 
-## Live API data with GEE validation
+## Live API data with a DEM covariate
 
-Pull real weather station data, add an elevation covariate, and compare the output against a MODIS satellite reference.
+Pull real weather station data, add an elevation covariate, and compare several methods on the same boundary.
 
-**1. Install and authenticate**
+**1. Install**
 
 ```bash
-pip install "geointerpo[full,gee]"
-earthengine authenticate
+pip install "geointerpo[full]"
 ```
 
 **2. Run**
@@ -101,12 +100,11 @@ result = Pipeline(
     boundary="Bavaria, Germany",
     method=["kriging", "rk", "gp"],
     include_dem=True,
-    validate_with_gee=True,
     resolution=0.1,
 ).run()
 
 print(result.metrics_table())
-print(result.gee_metrics)
+print(result.best_method())
 result.save("outputs/")
 ```
 
@@ -117,31 +115,100 @@ result.save("outputs/")
 
 ## Interactive map in Jupyter
 
-Display the interpolated surface on an interactive map after running the pipeline.
+Display the interpolated surface on a zoomable map with one call.
 
 **1. Install**
 
 ```bash
-pip install "geointerpo[notebooks,raster]"
+pip install "geointerpo[interactive]"   # plotly (lightweight)
+# or:
+pip install "geointerpo[notebooks]"     # plotly + leafmap + full Jupyter stack
 ```
 
 **2. Display**
 
 ```python
-import leafmap
-import tempfile
+result = Pipeline(data="sample", method="kriging", resolution="5km").run()
 
-da = result.grid
-with tempfile.NamedTemporaryFile(suffix=".tif", delete=False) as f:
-    tmp = f.name
+# One call — auto-detects plotly or leafmap
+fig = result.plot_interactive()
+fig.show()   # in a script; omit in Jupyter (renders inline)
+```
 
-da.rio.set_spatial_dims(x_dim="lon", y_dim="lat") \
-  .rio.write_crs("EPSG:4326") \
-  .rio.to_raster(tmp)
+You can also call the underlying function directly for more control:
 
-m = leafmap.Map(center=[float(da.lat.mean()), float(da.lon.mean())], zoom=6)
-m.add_raster(tmp, colormap="RdYlBu_r", layer_name="Interpolated")
-m  # displays inline in Jupyter
+```python
+from geointerpo.viz_interactive import plot_interactive
+
+fig = plot_interactive(
+    result.grid,
+    stations=result.stations,
+    backend="plotly",        # 'plotly' | 'leafmap' | 'auto'
+    title="Temperature (°C)",
+    cmap="RdYlBu_r",
+    opacity=0.85,
+)
+```
+
+---
+
+## Auto-rank methods
+
+Compare methods head-to-head and let geointerpo tell you which one won.
+
+```python
+from geointerpo import Pipeline
+
+result = Pipeline(
+    data="sample",
+    variable="temperature",
+    method=["idw", "kriging", "spline", "rbf", "gp"],
+    resolution="10km",
+    cv_folds=5,
+).run()
+
+print(result.best_method())       # 'kriging'
+print(result.rank_methods())      # ranked DataFrame with rmse / mae / r / rank columns
+result.plot_interactive()         # interactive map of the best method's grid
+```
+
+---
+
+## Kriging variance surface
+
+Visualise where your interpolation is most uncertain.
+
+```python
+from geointerpo import Pipeline
+from geointerpo import viz
+from geointerpo.data.samples import load_temperature
+
+gdf  = load_temperature(n_stations=40, seed=0)
+bbox = (5.0, 44.0, 25.0, 56.0)
+
+result = Pipeline(data=gdf, method="kriging", resolution="5km", cv_folds=0).run()
+
+var_da = result.variance_grids["kriging"]
+fig = viz.plot_interpolated(var_da, title="Kriging variance (highest = uncertain)")
+fig.savefig("kriging_variance.png", dpi=120, bbox_inches="tight")
+```
+
+---
+
+## ML uncertainty intervals
+
+Bootstrap prediction intervals from a Random Forest.
+
+```python
+from geointerpo.interpolators.ml import MLInterpolator
+from geointerpo.data.samples import load_temperature
+
+gdf  = load_temperature(n_stations=50, seed=1)
+bbox = (5.0, 44.0, 25.0, 56.0)
+
+model = MLInterpolator(method="rf", n_estimators=200).fit(gdf)
+mean, lower, upper = model.predict_with_uncertainty(bbox, resolution="10km", alpha=0.1)
+# mean, lower, upper are xr.DataArrays — 90% bootstrap interval
 ```
 
 ---

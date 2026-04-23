@@ -92,7 +92,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `Pipeline` — three-step workflow matching ArcGIS Spatial Analyst
 - Boundary loading from place names, files, bbox tuples, GeoDataFrames
 - Data sources: Meteostat, OpenAQ, Open-Meteo, sample data
-- GEE validation against MODIS LST, CHIRPS, Sentinel-5P
 - GeoTIFF and NetCDF export via rioxarray
 - Blocked spatial k-fold cross-validation
 - `SearchRadius` (variable/fixed) parameter

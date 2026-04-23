@@ -1,6 +1,6 @@
 # Methods
 
-**17 algorithms · 26 method keys.**  
+**18 canonical methods · 28 accepted method keys.**  
 Every method shares `.fit(gdf)` → `.predict(bbox, resolution)` → `xr.DataArray`.  
 Swap `method=` to compare — everything else stays the same.
 

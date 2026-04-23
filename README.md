@@ -2,17 +2,17 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.9%2B-blue?style=flat-square"/>
-  <img src="https://img.shields.io/badge/methods-15-teal?style=flat-square"/>
+  <img src="https://img.shields.io/badge/methods-18-teal?style=flat-square"/>
   <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square"/>
   <img src="https://img.shields.io/badge/docs-online-orange?style=flat-square"/>
 </p>
 
 <p align="center">
-  Spatial interpolation for Python — 15 algorithms, live data APIs, and boundary clipping.<br/>
+  Spatial interpolation for Python — 18 methods, live data APIs, and boundary clipping.<br/>
   Drop in point data, get a smooth interpolated raster out.<br/><br/>
-  Fetch live weather, air quality, or precipitation data from <b>Meteostat</b>, <b>OpenAQ</b>, and <b>Open-Meteo</b>.<br/>
+  Fetch live weather, air quality, or precipitation data from <b>Meteostat</b>, <b>OpenAQ</b>, <b>Open-Meteo</b>, <b>NASA POWER</b>, and <b>ERA5</b>.<br/>
   Define your study area by place name, polygon file, or bounding box — boundaries are resolved automatically.<br/>
-  Export to <b>GeoTIFF</b> or <b>NetCDF</b>, run spatial cross-validation, and compare methods side by side.
+  Export to <b>GeoTIFF</b> or <b>NetCDF</b>, run spatial cross-validation, compare methods side by side, and visualize interactively.
 </p>
 
 <p align="center">
@@ -54,7 +54,9 @@ result = Pipeline(
 ).run()
 
 result.plot()            # side-by-side comparison
+result.plot_interactive()# zoomable plotly/leafmap map
 result.metrics_table()   # cross-validation RMSE / r
+result.best_method()     # best CV score
 result.save("outputs/")  # GeoTIFF + PNG + CSV
 ```
 
@@ -62,7 +64,7 @@ result.save("outputs/")  # GeoTIFF + PNG + CSV
 
 ## Methods
 
-geointerpo covers the full ArcGIS Spatial Analyst interpolation toolkit plus modern ML methods. All share the same interface — swap `method=` to compare.
+geointerpo covers 18 canonical methods across deterministic, geostatistical, and ML workflows. All share the same interface — swap `method=` to compare.
 
 ### Distance-based
 

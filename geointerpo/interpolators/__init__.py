@@ -15,11 +15,26 @@ _MAP = {
 }
 
 
+def _optional_import_placeholder(name: str, exc: ImportError):
+    class _MissingOptionalDependency:
+        __name__ = name
+        __qualname__ = name
+        __doc__ = f"{name} is unavailable because an optional dependency is missing."
+
+        def __init__(self, *args, **kwargs):
+            raise ImportError(str(exc)) from exc
+
+    return _MissingOptionalDependency
+
+
 def __getattr__(name: str):
     if name in _MAP:
         import importlib
-        mod = importlib.import_module(_MAP[name])
-        return getattr(mod, name)
+        try:
+            mod = importlib.import_module(_MAP[name])
+            return getattr(mod, name)
+        except ImportError as exc:
+            return _optional_import_placeholder(name, exc)
     raise AttributeError(f"module 'geointerpo.interpolators' has no attribute {name!r}")
 
 

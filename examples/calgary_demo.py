@@ -2,7 +2,7 @@
 
     Step 1  data=      synthetic offline data (swap for CSV / API)
     Step 2  boundary=  Calgary city limits resolved via Nominatim
-    Step 3  method=    three methods compared side-by-side
+    Step 3  method=    three methods compared side-by-side + auto-ranked
 
 Nominatim is called once for the boundary polygon (needs network).
 Everything else is offline.
@@ -27,13 +27,23 @@ result = Pipeline(
     method_params={
         "kriging": {"variogram_model": "spherical"},
     },
-    resolution=0.05,
+    resolution="2km",                       # human-readable resolution string
     padding_deg=0.2,
 ).run()
 
 print("\nCross-validation metrics:")
 print(result.metrics_table())
+print(f"\nBest method: {result.best_method()}")
+print("\nRanking:")
+print(result.rank_methods())
 result.save("outputs/calgary")
+
+# Interactive map (requires: pip install geointerpo[interactive])
+try:
+    fig = result.plot_interactive()
+    fig.show()
+except ImportError:
+    pass
 
 
 # ------------------------------------------------------------------

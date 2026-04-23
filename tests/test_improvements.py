@@ -261,6 +261,29 @@ def test_rank_methods_invalid_metric(gdf):
         result.rank_methods(by="f1_score")
 
 
+def test_validation_package_exports():
+    from geointerpo.validation import compute_metrics as exported_compute_metrics
+    from geointerpo.validation import grid_metrics, spatial_cv as exported_spatial_cv
+
+    assert exported_compute_metrics is compute_metrics
+    assert exported_spatial_cv is spatial_cv
+    assert callable(grid_metrics)
+
+
+def test_plot_interactive_plotly_smoke(gdf):
+    pytest.importorskip("plotly")
+
+    result = Pipeline(
+        data=gdf,
+        method="idw",
+        resolution=2.0,
+        cv_folds=3,
+    ).run()
+    fig = result.plot_interactive(backend="plotly")
+
+    assert len(fig.data) >= 1
+
+
 # ---------------------------------------------------------------------------
 # 7. Variance grids in InterpolationResult
 # ---------------------------------------------------------------------------

@@ -9,14 +9,14 @@ Three inputs → one call → results.
 Run (offline, no network needed):
     python examples/quickstart.py
 
-For interactive maps install the notebooks extra:
-    pip install 'geointerpo[notebooks]'
+For interactive maps:
+    pip install 'geointerpo[interactive]'
 """
 
 from geointerpo import Pipeline
 
 # =============================================================================
-# Example A — Offline demo (no network)
+# Example A — Offline demo with auto-ranking (no network)
 # =============================================================================
 result = Pipeline(
     data="sample",                            # Step 1: built-in synthetic data
@@ -27,12 +27,22 @@ result = Pipeline(
         "idw":     {"power": 2},
         "kriging": {"variogram_model": "spherical"},
     },
-    resolution=0.1,
+    resolution="2km",                         # resolution as a string — 2 km grid
     cv_folds=5,
 ).run()
 
 print(result.metrics_table())
+print(f"\nBest method: {result.best_method()}")
+print("\nFull ranking:")
+print(result.rank_methods())
 result.save("outputs/quickstart")
+
+# Interactive map (requires: pip install geointerpo[interactive])
+try:
+    fig = result.plot_interactive()
+    fig.show()
+except ImportError:
+    pass
 
 
 # =============================================================================

@@ -20,6 +20,33 @@
     pip install "geointerpo[viz]"
     ```
 
+??? failure "ModuleNotFoundError: No module named 'plotly'"
+    Interactive maps require the `interactive` extra:
+    ```bash
+    pip install "geointerpo[interactive]"
+    # or just: pip install plotly
+    ```
+
+??? failure "ModuleNotFoundError: No module named 'gstools'"
+    Cokriging and Sequential Gaussian Simulation require the `geostat` extra:
+    ```bash
+    pip install "geointerpo[geostat]"
+    ```
+
+??? failure "ModuleNotFoundError: No module named 'mapie'"
+    Conformal prediction intervals for GBM require the `uncertainty` extra:
+    ```bash
+    pip install "geointerpo[uncertainty]"
+    ```
+    RF bootstrap intervals are built-in and need no extra install.
+
+??? failure "ModuleNotFoundError: No module named 'cdsapi'"
+    ERA5 reanalysis requires the `era5` extra plus a free CDS API account:
+    ```bash
+    pip install "geointerpo[era5]"
+    ```
+    Then create `~/.cdsapirc` following the [CDS API setup guide](https://cds.climate.copernicus.eu/api-how-to).
+
 ---
 
 ## Boundaries
@@ -52,20 +79,6 @@
 ??? failure "ImportError: No module named 'meteostat'"
     ```bash
     pip install "geointerpo[data]"
-    ```
-
----
-
-## GEE
-
-??? failure "EEException: Please authorise access"
-    ```bash
-    earthengine authenticate
-    ```
-
-??? failure "ImportError: No module named 'earthengine'"
-    ```bash
-    pip install "geointerpo[gee]"
     ```
 
 ---

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pathlib
+import numpy as np
 import xarray as xr
 
 
@@ -32,11 +33,24 @@ def export_netcdf(da: xr.DataArray, path: str | pathlib.Path) -> None:
     path = pathlib.Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
 
+    da = da.copy()
+    da.attrs = _netcdf_safe_attrs(da.attrs)
     ds = da.to_dataset(name=da.name or "value")
     ds["lon"].attrs.update({"units": "degrees_east", "long_name": "longitude"})
     ds["lat"].attrs.update({"units": "degrees_north", "long_name": "latitude"})
     ds.attrs.setdefault("Conventions", "CF-1.8")
     ds.to_netcdf(str(path))
+
+
+def _netcdf_safe_attrs(attrs: dict) -> dict:
+    """Drop attrs that NetCDF backends cannot encode, such as 2-D arrays."""
+    safe = {}
+    for key, value in attrs.items():
+        arr = np.asarray(value) if isinstance(value, (list, tuple, np.ndarray)) else None
+        if arr is not None and arr.ndim > 1:
+            continue
+        safe[key] = value
+    return safe
 
 
 def clip_to_polygon(

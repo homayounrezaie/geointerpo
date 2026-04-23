@@ -9,7 +9,7 @@ hide:
 # geointerpo
 
 Point data in. Smooth interpolated raster out.  
-17 algorithms · live weather & air-quality APIs · uncertainty quantification · interactive maps.
+18 methods · live weather & air-quality APIs · uncertainty quantification · interactive maps.
 
 <div class="hero-buttons" markdown>
 <a class="hero-btn hero-btn-primary" href="install/">Get Started</a>
@@ -23,7 +23,7 @@ Point data in. Smooth interpolated raster out.
 
 <div class="grid cards" markdown>
 
--   :material-rocket-launch:{ .lg .middle } **One API, 17 methods**
+-   :material-rocket-launch:{ .lg .middle } **One API, 18 methods**
 
     ---
 
@@ -211,7 +211,7 @@ All outputs below use the same 60 weather stations over Alberta, Canada.
   <figure><img src="assets/methods/rk.png" width="230" alt="RK"/><figcaption>Regression Kriging</figcaption></figure>
 </div>
 
-[:octicons-arrow-right-24: Full method reference with all 17 algorithms](interpolators.md)
+[:octicons-arrow-right-24: Full method reference with all 18 canonical methods](interpolators.md)
 
 ---
 

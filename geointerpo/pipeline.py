@@ -88,6 +88,7 @@ class InterpolationResult:
     method: str = "kriging"
     variable: str = "value"
     bbox: tuple = ()
+    resolution_deg: float = 0.25
 
     # ------------------------------------------------------------------
 
@@ -114,7 +115,9 @@ class InterpolationResult:
             fig = viz.plot_interpolated(
                 self.grid, stations=self.stations, boundary=self.boundary, **kwargs
             )
-        plt.show()
+        backend = plt.get_backend().lower()
+        if "agg" not in backend:
+            plt.show()
         return fig
 
     def plot_interactive(self, backend: str = "auto", **kwargs):
@@ -472,6 +475,7 @@ class Pipeline:
             method=self.methods[0],
             variable=self.variable,
             bbox=bbox,
+            resolution_deg=self.resolution,
         )
 
         if cv_metrics:
@@ -590,6 +594,8 @@ class Pipeline:
                 "air_quality": load_air_quality,
                 "pm25": load_air_quality,
             }.get(var, load_temperature)
+            if boundary_gdf is None and self._location is None:
+                return fn()
             return fn(bbox=fetch_bbox)
 
         if src == "meteostat":

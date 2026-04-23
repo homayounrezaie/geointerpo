@@ -112,7 +112,7 @@ def _plotly_map(da, stations, boundary, title, cmap, opacity, **kwargs):
     lon_grid, lat_grid = np.meshgrid(lons, lats)
     valid_mask = ~np.isnan(vals)
 
-    fig.add_trace(go.Densitymapbox(
+    fig.add_trace(go.Densitymap(
         lat=lat_grid[valid_mask].ravel(),
         lon=lon_grid[valid_mask].ravel(),
         z=vals[valid_mask].ravel(),
@@ -129,7 +129,7 @@ def _plotly_map(da, stations, boundary, title, cmap, opacity, **kwargs):
     # Station scatter
     if stations is not None and len(stations) > 0:
         sv = stations["value"].values if "value" in stations.columns else None
-        fig.add_trace(go.Scattermapbox(
+        fig.add_trace(go.Scattermap(
             lat=stations.geometry.y.values,
             lon=stations.geometry.x.values,
             mode="markers",
@@ -139,7 +139,6 @@ def _plotly_map(da, stations, boundary, title, cmap, opacity, **kwargs):
                 colorscale=colorscale,
                 cmin=vmin,
                 cmax=vmax,
-                line=dict(width=1, color="white"),
             ),
             hovertemplate=(
                 "lon: %{lon:.3f}<br>lat: %{lat:.3f}<br>"
@@ -154,7 +153,7 @@ def _plotly_map(da, stations, boundary, title, cmap, opacity, **kwargs):
 
     fig.update_layout(
         title=title or (da.name or "Interpolated surface"),
-        mapbox=dict(
+        map=dict(
             style="carto-positron",
             center={"lat": center_lat, "lon": center_lon},
             zoom=_auto_zoom(lats, lons),
